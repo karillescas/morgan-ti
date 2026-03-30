@@ -1,0 +1,3844 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Morgan TI — Gestión de Tecnologías</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<style>
+  :root {
+    --bg: #0f1117;
+    --bg2: #181b24;
+    --bg3: #1e2130;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --text: #e8eaf0;
+    --text2: #8b90a0;
+    --text3: #555a6b;
+    --accent: #4f8ef7;
+    --accent2: #2563eb;
+    --teal: #2dd4bf;
+    --amber: #f59e0b;
+    --red: #ef4444;
+    --green: #22c55e;
+    --purple: #a78bfa;
+    --radius: 10px;
+    --radius-sm: 6px;
+    --shadow: 0 4px 24px rgba(0,0,0,0.4);
+    --font: 'DM Sans', sans-serif;
+    --mono: 'DM Mono', monospace;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { font-size: 14px; }
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+  }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    width: 220px;
+    min-height: 100vh;
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    z-index: 100;
+  }
+  .sidebar-logo {
+    padding: 24px 20px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .logo-mark {
+    display: flex; align-items: center; gap: 10px;
+  }
+  .logo-icon {
+    width: 32px; height: 32px;
+    background: var(--accent);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+  .logo-text { font-size: 15px; font-weight: 600; letter-spacing: -0.3px; }
+  .logo-sub { font-size: 11px; color: var(--text3); margin-top: 2px; font-family: var(--mono); }
+
+  .sidebar-nav { flex: 1; padding: 12px 0; }
+  .nav-section { padding: 8px 16px 4px; font-size: 10px; font-weight: 500; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 20px;
+    cursor: pointer;
+    border-radius: 0;
+    transition: background 0.15s;
+    font-size: 13.5px;
+    color: var(--text2);
+    border-left: 2px solid transparent;
+    position: relative;
+  }
+  .nav-item:hover { background: rgba(255,255,255,0.04); color: var(--text); }
+  .nav-item.active {
+    background: rgba(79,142,247,0.1);
+    color: var(--accent);
+    border-left-color: var(--accent);
+  }
+  .nav-icon { font-size: 15px; width: 18px; text-align: center; }
+  .nav-badge {
+    margin-left: auto;
+    background: var(--accent2);
+    color: white;
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 10px;
+    font-family: var(--mono);
+  }
+  .sidebar-footer {
+    padding: 16px 20px;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--text3);
+  }
+
+  /* ── MAIN ── */
+  .main { margin-left: 220px; flex: 1; min-height: 100vh; }
+
+  /* ── TOPBAR ── */
+  .topbar {
+    height: 56px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center;
+    padding: 0 28px;
+    gap: 16px;
+    position: sticky; top: 0; z-index: 50;
+  }
+  .topbar-title { font-size: 15px; font-weight: 500; flex: 1; }
+  .topbar-sub { font-size: 12px; color: var(--text3); margin-top: 2px; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 14px;
+    border-radius: var(--radius-sm);
+    border: none; cursor: pointer;
+    font-family: var(--font); font-size: 13px; font-weight: 500;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { background: var(--accent2); }
+  .btn-ghost { background: transparent; color: var(--text2); border: 1px solid var(--border2); }
+  .btn-ghost:hover { background: rgba(255,255,255,0.05); color: var(--text); }
+  .btn-danger { background: rgba(239,68,68,0.15); color: var(--red); border: 1px solid rgba(239,68,68,0.25); }
+  .btn-danger:hover { background: rgba(239,68,68,0.25); }
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
+  .btn-teal { background: rgba(45,212,191,0.15); color: var(--teal); border: 1px solid rgba(45,212,191,0.25); }
+  .btn-teal:hover { background: rgba(45,212,191,0.25); }
+
+  /* ── CONTENT ── */
+  .content { padding: 28px; }
+
+  /* ── STATS ── */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+  .stat-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    position: relative; overflow: hidden;
+  }
+  .stat-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  }
+  .stat-card.blue::before { background: var(--accent); }
+  .stat-card.teal::before { background: var(--teal); }
+  .stat-card.amber::before { background: var(--amber); }
+  .stat-card.green::before { background: var(--green); }
+  .stat-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px; }
+  .stat-value { font-size: 28px; font-weight: 600; letter-spacing: -1px; font-family: var(--mono); }
+  .stat-sub { font-size: 11px; color: var(--text3); margin-top: 4px; }
+  .stat-icon { position: absolute; top: 16px; right: 16px; font-size: 20px; opacity: 0.3; }
+
+  /* ── TABLE ── */
+  .table-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+  .table-header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+  .table-title { font-size: 14px; font-weight: 500; flex: 1; min-width: 120px; }
+  .search-box {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 6px 12px;
+    min-width: 220px;
+  }
+  .search-box input {
+    background: none; border: none; outline: none;
+    color: var(--text); font-family: var(--font); font-size: 13px;
+    width: 100%;
+  }
+  .search-box input::placeholder { color: var(--text3); }
+
+  table { width: 100%; border-collapse: collapse; }
+  thead tr { border-bottom: 1px solid var(--border); }
+  th {
+    padding: 10px 16px;
+    text-align: left;
+    font-size: 11px; font-weight: 500;
+    color: var(--text3);
+    text-transform: uppercase; letter-spacing: 0.8px;
+    white-space: nowrap;
+  }
+  td {
+    padding: 11px 16px;
+    font-size: 13px;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    vertical-align: middle;
+  }
+  tbody tr:hover { background: rgba(255,255,255,0.02); }
+  tbody tr:last-child td { border-bottom: none; }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 8px;
+    border-radius: 20px;
+    font-size: 11px; font-weight: 500;
+    white-space: nowrap;
+  }
+  .badge-blue { background: rgba(79,142,247,0.15); color: #7eb3fa; border: 1px solid rgba(79,142,247,0.2); }
+  .badge-teal { background: rgba(45,212,191,0.12); color: var(--teal); border: 1px solid rgba(45,212,191,0.2); }
+  .badge-amber { background: rgba(245,158,11,0.12); color: var(--amber); border: 1px solid rgba(245,158,11,0.2); }
+  .badge-red { background: rgba(239,68,68,0.12); color: #fc8181; border: 1px solid rgba(239,68,68,0.2); }
+  .badge-green { background: rgba(34,197,94,0.12); color: var(--green); border: 1px solid rgba(34,197,94,0.2); }
+  .badge-purple { background: rgba(167,139,250,0.12); color: var(--purple); border: 1px solid rgba(167,139,250,0.2); }
+  .badge-gray { background: rgba(255,255,255,0.05); color: var(--text2); border: 1px solid var(--border2); }
+
+  .mono { font-family: var(--mono); font-size: 12px; color: var(--text2); }
+  .text-sm { font-size: 12px; color: var(--text2); }
+  .text-muted { color: var(--text3); }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 999;
+    align-items: center; justify-content: center;
+    backdrop-filter: blur(3px);
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: 14px;
+    width: 520px; max-width: 95vw;
+    max-height: 90vh; overflow-y: auto;
+    box-shadow: var(--shadow);
+    animation: slideUp 0.2s ease;
+  }
+  @keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  .modal-header {
+    display: flex; align-items: center;
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid var(--border);
+    gap: 12px;
+  }
+  .modal-title { font-size: 15px; font-weight: 600; flex: 1; }
+  .modal-close {
+    background: none; border: none; color: var(--text3);
+    cursor: pointer; font-size: 18px; padding: 4px; border-radius: 4px;
+    transition: color 0.15s;
+  }
+  .modal-close:hover { color: var(--text); }
+  .modal-body { padding: 20px 24px; }
+  .modal-footer { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; }
+
+  /* ── FORM ── */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .form-grid.cols-1 { grid-template-columns: 1fr; }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group.full { grid-column: 1 / -1; }
+  label { font-size: 12px; font-weight: 500; color: var(--text2); }
+  input, select, textarea {
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius-sm);
+    padding: 8px 12px;
+    color: var(--text);
+    font-family: var(--font); font-size: 13px;
+    outline: none;
+    transition: border-color 0.15s;
+    width: 100%;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+  select option { background: var(--bg2); }
+  textarea { resize: vertical; min-height: 70px; }
+
+  /* ── SECTION TABS ── */
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* ── IMPORT AREA ── */
+  .import-zone {
+    border: 2px dashed var(--border2);
+    border-radius: var(--radius);
+    padding: 32px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--bg3);
+  }
+  .import-zone:hover, .import-zone.drag { border-color: var(--accent); background: rgba(79,142,247,0.05); }
+  .import-icon { font-size: 32px; margin-bottom: 10px; opacity: 0.5; }
+  .import-title { font-size: 14px; font-weight: 500; margin-bottom: 4px; }
+  .import-sub { font-size: 12px; color: var(--text3); }
+
+  /* ── ALERT ── */
+  .alert {
+    padding: 12px 16px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    margin-bottom: 16px;
+    display: flex; gap: 10px; align-items: flex-start;
+  }
+  .alert-info { background: rgba(79,142,247,0.1); border: 1px solid rgba(79,142,247,0.2); color: #93c5fd; }
+  .alert-success { background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.2); color: #86efac; }
+  .alert-warning { background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.2); color: #fcd34d; }
+
+  /* ── PAGINATION ── */
+  .pagination {
+    display: flex; align-items: center; gap: 8px;
+    padding: 12px 20px;
+    border-top: 1px solid var(--border);
+    font-size: 12px; color: var(--text3);
+  }
+  .pagination .spacer { flex: 1; }
+  .page-btn {
+    background: var(--bg3); border: 1px solid var(--border);
+    color: var(--text2); padding: 4px 10px; border-radius: 4px;
+    cursor: pointer; font-size: 12px; font-family: var(--font);
+    transition: all 0.15s;
+  }
+  .page-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .page-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+
+  /* ── EMPTY STATE ── */
+  .empty-state {
+    text-align: center; padding: 48px 24px;
+    color: var(--text3);
+  }
+  .empty-icon { font-size: 36px; margin-bottom: 12px; opacity: 0.4; }
+  .empty-title { font-size: 14px; color: var(--text2); margin-bottom: 6px; }
+  .empty-sub { font-size: 12px; }
+
+  /* ── ANTIGÜEDAD ── */
+  .age-bar {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .age-track {
+    height: 4px; background: var(--bg3); border-radius: 2px;
+    width: 60px; overflow: hidden;
+  }
+  .age-fill { height: 100%; border-radius: 2px; }
+
+  /* ── SCROLL ── */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 640px) {
+    .form-grid { grid-template-columns: 1fr; }
+    .form-group.full { grid-column: 1; }
+  }
+
+  .divider { height: 1px; background: var(--border); margin: 16px 0; }
+  .tag { display: inline-block; padding: 2px 7px; background: var(--bg3); border: 1px solid var(--border); border-radius: 4px; font-size: 11px; color: var(--text2); font-family: var(--mono); }
+  .row-actions { display: flex; gap: 6px; opacity: 0; transition: opacity 0.15s; }
+  tr:hover .row-actions { opacity: 1; }
+  .icon-btn { background: none; border: none; cursor: pointer; padding: 4px 6px; border-radius: 4px; color: var(--text3); font-size: 14px; transition: all 0.15s; }
+  .icon-btn:hover { background: var(--bg3); color: var(--text); }
+  .icon-btn.del:hover { color: var(--red); background: rgba(239,68,68,0.1); }
+</style>
+</head>
+<body>
+
+<!-- PANTALLA DE LOGIN -->
+<div id="login-screen" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center">
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:16px;width:380px;max-width:95vw;padding:36px 32px;box-shadow:0 8px 40px rgba(0,0,0,0.5)">
+    <div style="text-align:center;margin-bottom:28px">
+      <div style="width:52px;height:52px;background:var(--accent);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;margin:0 auto 14px">💻</div>
+      <div style="font-size:20px;font-weight:600;letter-spacing:-.3px">Morgan TI</div>
+      <div style="font-size:12px;color:var(--text3);margin-top:4px">Gestión de Tecnologías</div>
+    </div>
+    <div id="login-error" style="display:none;padding:10px 14px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);border-radius:6px;color:#fc8181;font-size:13px;margin-bottom:14px"></div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div>
+        <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:5px">Correo</label>
+        <input type="email" id="login-email" placeholder="usuario@empresa.com"
+          style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:10px 14px;color:var(--text);font-family:var(--font);font-size:14px;outline:none;box-sizing:border-box"
+          onkeydown="if(event.key==='Enter')document.getElementById('login-pass').focus()">
+      </div>
+      <div>
+        <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:5px">Contraseña</label>
+        <input type="password" id="login-pass" placeholder="••••••••"
+          style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:10px 14px;color:var(--text);font-family:var(--font);font-size:14px;outline:none;box-sizing:border-box"
+          onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <button onclick="doLogin()" id="login-btn"
+        style="width:100%;background:var(--accent);border:none;color:white;border-radius:8px;padding:12px;font-size:14px;font-weight:600;font-family:var(--font);cursor:pointer;margin-top:4px;transition:background .15s"
+        onmouseover="this.style.background='var(--accent2)'" onmouseout="this.style.background='var(--accent)'">
+        Entrar
+      </button>
+    </div>
+    <div style="text-align:center;margin-top:16px;font-size:11px;color:var(--text3)">Morgan TI · Depto. de Tecnologías</div>
+  </div>
+</div>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-mark">
+      <div class="logo-icon">💻</div>
+      <div>
+        <div class="logo-text">TI Control</div>
+        <div class="logo-sub">v1.0 · 2025</div>
+      </div>
+    </div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section">Principal</div>
+    <div class="nav-item active" onclick="switchView('dashboard')">
+      <span class="nav-icon">◼</span> Dashboard
+    </div>
+    <div class="nav-section">Módulos</div>
+    <div class="nav-item" onclick="switchView('resguardos')">
+      <span class="nav-icon">🖥</span> Resguardos
+      <span class="nav-badge" id="badge-resguardos">0</span>
+    </div>
+    <div class="nav-item" onclick="switchView('compras')">
+      <span class="nav-icon">🛒</span> Compras
+      <span class="nav-badge" id="badge-compras">0</span>
+    </div>
+    <div class="nav-item" onclick="switchView('almacen')">
+      <span class="nav-icon">📦</span> Almacén
+      <span class="nav-badge" id="badge-almacen">0</span>
+    </div>
+    <div class="nav-item" onclick="switchView('armar')">
+      <span class="nav-icon">🔧</span> Armar PC
+    </div>
+    <div class="nav-section">Catálogos</div>
+    <div class="nav-item" onclick="switchView('empleados')">
+      <span class="nav-icon">👤</span> Empleados
+    </div>
+    <div class="nav-item" onclick="switchView('equipos-cat')">
+      <span class="nav-icon">📦</span> Modelos
+    </div>
+    <div class="nav-item" onclick="switchView('catalogos')">
+      <span class="nav-icon">🏷</span> Clasificaciones
+    </div>
+    <div class="nav-section" style="margin-top:8px">Próximamente</div>
+    <div class="nav-item" style="opacity:0.4;cursor:default">
+      <span class="nav-icon">🎫</span> Tickets
+    </div>
+    <div class="nav-item" style="opacity:0.4;cursor:default">
+      <span class="nav-icon">📊</span> Reportes
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <div style="font-size:11px;color:var(--text3);margin-bottom:6px">Morgan TI · Depto. de Tecnologías</div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <div style="font-size:11px;color:var(--text2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="sidebar-user">—</div>
+      <button onclick="doLogout()" title="Cerrar sesión"
+        style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:3px 5px;border-radius:4px;transition:all .15s"
+        onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--text3)'">⏻</button>
+    </div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+
+  <!-- ══ DASHBOARD ══ -->
+  <div id="view-dashboard" class="view active">
+    <div class="topbar">
+      <div>
+        <div class="topbar-title">Dashboard</div>
+      </div>
+    </div>
+    <div class="content">
+      <div class="stats-grid">
+        <div class="stat-card blue">
+          <div class="stat-icon">🖥</div>
+          <div class="stat-label">Equipos en resguardo</div>
+          <div class="stat-value" id="stat-resguardos">0</div>
+          <div class="stat-sub">activos actualmente</div>
+        </div>
+        <div class="stat-card teal">
+          <div class="stat-icon">💰</div>
+          <div class="stat-label">Total en compras</div>
+          <div class="stat-value" id="stat-monto">$0</div>
+          <div class="stat-sub">registradas este año</div>
+        </div>
+        <div class="stat-card amber">
+          <div class="stat-icon">📋</div>
+          <div class="stat-label">Arrendamientos activos</div>
+          <div class="stat-value" id="stat-arrendados">0</div>
+          <div class="stat-sub">equipos en renta</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-icon">👥</div>
+          <div class="stat-label">Empleados registrados</div>
+          <div class="stat-value" id="stat-empleados">0</div>
+          <div class="stat-sub">en el catálogo</div>
+        </div>
+      </div>
+
+      <!-- Alertas -->
+      <div id="alertas-container"></div>
+
+      <!-- Últimos resguardos -->
+      <div class="table-card">
+        <div class="table-header">
+          <div class="table-title">Resguardos recientes</div>
+          <button class="btn btn-ghost btn-sm" onclick="switchView('resguardos')">Ver todos →</button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Empleado</th><th>Equipo</th><th>Tipo</th><th>Fecha</th><th>Estado</th>
+            </tr>
+          </thead>
+          <tbody id="dash-resguardos-tbody">
+            <tr><td colspan="5"><div class="empty-state"><div class="empty-icon">🖥</div><div class="empty-title">Sin resguardos aún</div><div class="empty-sub">Registra el primero desde el módulo de Resguardos</div></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ RESGUARDOS ══ -->
+  <div id="view-resguardos" class="view">
+    <div class="topbar">
+      <div>
+        <div class="topbar-title">Resguardos de equipos</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="openModal('modal-import-resguardos')">⬆ Importar Excel</button>
+      <button class="btn btn-primary" onclick="openModal('modal-resguardo')">+ Nuevo resguardo</button>
+    </div>
+    <div class="content">
+      <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:20px">
+        <div class="stat-card blue">
+          <div class="stat-label">Total resguardos</div>
+          <div class="stat-value" id="res-stat-total">0</div>
+        </div>
+        <div class="stat-card amber">
+          <div class="stat-label">En arrendamiento</div>
+          <div class="stat-value" id="res-stat-arr">0</div>
+        </div>
+        <div class="stat-card teal">
+          <div class="stat-label">Equipos propios</div>
+          <div class="stat-value" id="res-stat-prop">0</div>
+        </div>
+      </div>
+      <div class="table-card">
+        <div class="table-header">
+          <div class="table-title">Todos los resguardos</div>
+          <div class="search-box">
+            <span style="color:var(--text3)">🔍</span>
+            <input type="text" placeholder="Buscar empleado, equipo, serie…" id="search-resguardos" oninput="renderResguardos()">
+          </div>
+          <select id="filter-tipo-res" onchange="renderResguardos()" style="width:auto;padding:6px 10px;font-size:13px">
+            <option value="">Todos los tipos</option>
+          </select>
+          <select id="filter-empresa-res" onchange="renderResguardos()" style="width:auto;padding:6px 10px;font-size:13px">
+            <option value="">Todas las empresas</option>
+          </select>
+          <select id="filter-centro-res" onchange="renderResguardos()" style="width:auto;padding:6px 10px;font-size:13px">
+            <option value="">Todos los centros</option>
+          </select>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>#</th><th>Empleado</th><th>Área</th><th>Empresa</th><th>Centro costo</th><th>Equipo</th><th>No. serie</th>
+              <th>Modalidad</th><th>Asignado</th><th>Antigüedad</th><th>Estado</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="resguardos-tbody"></tbody>
+        </table>
+        <div class="pagination">
+          <span id="res-count-label" style="color:var(--text3);font-size:12px">0 registros</span>
+          <div class="spacer"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ COMPRAS ══ -->
+  <div id="view-compras" class="view">
+    <div class="topbar">
+      <div>
+        <div class="topbar-title">Compras y consumibles</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="openModal('modal-import-compras')">⬆ Importar Excel</button>
+      <button class="btn btn-primary" onclick="openModal('modal-compra')">+ Nueva compra</button>
+    </div>
+    <div class="content">
+      <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:20px">
+        <div class="stat-card teal">
+          <div class="stat-label">Total compras</div>
+          <div class="stat-value" id="comp-stat-total">0</div>
+        </div>
+        <div class="stat-card amber">
+          <div class="stat-label">Monto total</div>
+          <div class="stat-value" id="comp-stat-monto" style="font-size:20px;padding-top:4px">$0.00</div>
+        </div>
+        <div class="stat-card blue">
+          <div class="stat-label">Consumibles</div>
+          <div class="stat-value" id="comp-stat-cons">0</div>
+        </div>
+      </div>
+      <div class="table-card">
+        <div class="table-header">
+          <div class="table-title">Registro de compras</div>
+          <div class="search-box">
+            <span style="color:var(--text3)">🔍</span>
+            <input type="text" placeholder="Buscar proveedor, concepto…" id="search-compras" oninput="renderCompras()">
+          </div>
+          <select id="filter-tipo-comp" onchange="renderCompras()" style="width:auto;padding:6px 10px;font-size:13px">
+            <option value="">Todos</option>
+            <option value="Equipo">Equipo</option>
+            <option value="Consumible">Consumible</option>
+            <option value="Accesorio">Accesorio</option>
+            <option value="Licencia">Licencia</option>
+          </select>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>#</th><th>Fecha</th><th>Concepto</th><th>Proveedor</th><th>Tipo</th>
+              <th>Cantidad</th><th>Costo unit.</th><th>Total</th><th>Stock</th><th>Factura</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="compras-tbody"></tbody>
+        </table>
+        <div class="pagination">
+          <span id="comp-count-label" style="color:var(--text3);font-size:12px">0 registros</span>
+          <div class="spacer"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ EMPLEADOS ══ -->
+  <div id="view-empleados" class="view">
+    <div class="topbar">
+      <div><div class="topbar-title">Catálogo de empleados</div></div>
+      <button class="btn btn-ghost btn-sm" onclick="openModal('modal-import-empleados')">⬆ Importar Excel</button>
+      <button class="btn btn-primary" onclick="openModal('modal-empleado')">+ Agregar empleado</button>
+    </div>
+    <div class="content">
+      <div class="alert alert-info">
+        <span>ℹ</span>
+        <span>Los empleados aquí registrados estarán disponibles al crear nuevos resguardos.</span>
+      </div>
+      <div class="table-card">
+        <div class="table-header">
+          <div class="table-title">Empleados</div>
+          <div class="search-box">
+            <span style="color:var(--text3)">🔍</span>
+            <input type="text" placeholder="Buscar nombre, área…" id="search-empleados" oninput="renderEmpleados()">
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr><th>#</th><th>Nombre</th><th>Área / Departamento</th><th>Cargo</th><th>Email</th><th>Equipos</th><th></th></tr>
+          </thead>
+          <tbody id="empleados-tbody"></tbody>
+        </table>
+        <div class="pagination">
+          <span id="emp-count-label" style="font-size:12px;color:var(--text3)">0 empleados</span>
+          <div class="spacer"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ CATÁLOGO EQUIPOS ══ -->
+  <!-- ══ CATÁLOGO MODELOS ══ -->
+  <div id="view-equipos-cat" class="view">
+    <div class="topbar">
+      <div><div class="topbar-title">Catálogo de modelos</div></div>
+      <button class="btn btn-primary" onclick="openModal('modal-equipo-cat')">+ Agregar modelo</button>
+    </div>
+    <div class="content">
+      <div class="table-card">
+        <div class="table-header">
+          <div class="table-title">Modelos registrados</div>
+        </div>
+        <table>
+          <thead>
+            <tr><th>#</th><th>Marca</th><th>Modelo</th><th>Tipo</th><th>Especificaciones</th><th>Precio ref.</th><th></th></tr>
+          </thead>
+          <tbody id="equipos-cat-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ ALMACÉN ══ -->
+  <div id="view-almacen" class="view">
+    <div class="topbar">
+      <div><div class="topbar-title">Almacén</div></div>
+      <button class="btn btn-ghost btn-sm" onclick="openModal('modal-ajuste-almacen')">+ Entrada manual</button>
+    </div>
+    <div class="content">
+      <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:20px">
+        <div class="stat-card blue">
+          <div class="stat-label">Items en almacén</div>
+          <div class="stat-value" id="alm-stat-items">0</div>
+        </div>
+        <div class="stat-card teal">
+          <div class="stat-label">Unidades disponibles</div>
+          <div class="stat-value" id="alm-stat-disp">0</div>
+        </div>
+        <div class="stat-card amber">
+          <div class="stat-label">Items en cero</div>
+          <div class="stat-value" id="alm-stat-cero">0</div>
+        </div>
+      </div>
+      <div class="table-card">
+        <div class="table-header">
+          <div class="table-title">Stock disponible</div>
+          <div class="search-box">
+            <span style="color:var(--text3)">🔍</span>
+            <input type="text" placeholder="Buscar componente…" id="search-almacen" oninput="renderAlmacen()">
+          </div>
+          <select id="filter-alm-tipo" onchange="renderAlmacen()" style="width:auto;padding:6px 10px;font-size:13px">
+            <option value="">Todos</option>
+            <option value="Componente">Componente</option>
+            <option value="Equipo">Equipo</option>
+            <option value="Consumible">Consumible</option>
+          </select>
+        </div>
+        <table>
+          <thead>
+            <tr><th>#</th><th>Descripción</th><th>Tipo</th><th>Marca</th><th>Factura / Fecha</th><th>Costo unit.</th><th>Ingresaron</th><th>Usados</th><th>Disponibles</th><th></th></tr>
+          </thead>
+          <tbody id="almacen-tbody"></tbody>
+        </table>
+        <div class="pagination">
+          <span id="alm-count-label" style="font-size:12px;color:var(--text3)">0 items</span>
+          <div class="spacer"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ ARMAR PC ══ -->
+  <div id="view-armar" class="view">
+    <div class="topbar">
+      <div><div class="topbar-title">Armar PC</div></div>
+      <button class="btn btn-primary" onclick="openModal('modal-armar')">🔧 Armar nueva PC</button>
+    </div>
+    <div class="content">
+      <div class="alert alert-info" style="margin-bottom:20px">
+        <span>🔧</span>
+        <span>Selecciona las piezas del almacén, define cuántas de cada una y cuántas PCs armar. Las piezas se descuentan automáticamente del almacén y las PCs quedan listas para asignar en resguardos.</span>
+      </div>
+      <div class="table-card">
+        <div class="table-header">
+          <div class="table-title">PCs armadas</div>
+        </div>
+        <table>
+          <thead>
+            <tr><th>#</th><th>Nombre</th><th>Tipo</th><th>Componentes</th><th>Costo/equipo</th><th>Cantidad</th><th>Disponibles</th><th>Fecha</th><th></th></tr>
+          </thead>
+          <tbody id="armar-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- Modal: Armar PC -->
+<div id="modal-armar" class="modal-overlay">
+  <div class="modal" style="width:640px">
+    <div class="modal-header">
+      <span style="font-size:18px">🔧</span>
+      <div class="modal-title">Armar PC</div>
+      <button class="modal-close" onclick="closeModal('modal-armar')">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- Datos del equipo a armar -->
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:14px">
+        <div style="font-size:11px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px">Equipo a crear</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Nombre del equipo *</label>
+            <input type="text" id="arm-nombre" placeholder="Ej. PC Oficina Contabilidad">
+          </div>
+          <div class="form-group">
+            <label>Tipo</label>
+            <select id="arm-tipo"></select>
+          </div>
+          <div class="form-group">
+            <label>Prefijo inventario</label>
+            <input type="text" id="arm-prefijo" placeholder="Ej. PC-OF">
+          </div>
+          <div class="form-group">
+            <label>¿Cuántas PCs armar?</label>
+            <input type="number" id="arm-cantidad" value="1" min="1" oninput="arm_recalcular()">
+          </div>
+        </div>
+      </div>
+
+      <!-- Selección de componentes del almacén -->
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <span style="font-size:13px;font-weight:500">Componentes por PC</span>
+        <span style="font-size:11px;color:var(--text3)">selecciona del almacén</span>
+        <span style="margin-left:auto;font-size:12px;color:var(--text3)">
+          Costo/PC: <strong id="arm-costo-unit" style="color:var(--teal)">$0.00</strong>
+        </span>
+      </div>
+
+      <!-- Líneas de componentes seleccionados -->
+      <div id="arm-lineas" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px;max-height:240px;overflow-y:auto"></div>
+
+      <button onclick="arm_agregarLinea()"
+        style="width:100%;padding:9px;border:1px dashed var(--border2);border-radius:6px;background:transparent;color:var(--text3);font-family:var(--font);font-size:13px;cursor:pointer;transition:all .15s;margin-bottom:12px"
+        onmouseover="this.style.borderColor='var(--teal)';this.style.color='var(--teal)'"
+        onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text3)'">
+        + Agregar pieza del almacén
+      </button>
+
+      <!-- Resumen stock -->
+      <div id="arm-alerta-stock" style="display:none"></div>
+
+      <!-- Total -->
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:10px 14px;display:flex;align-items:center;gap:12px">
+        <span style="font-size:12px;color:var(--text3);flex:1">Total de piezas a consumir del almacén</span>
+        <span id="arm-total-label" style="font-size:14px;font-weight:600;font-family:var(--mono);color:var(--text)">$0.00</span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-armar')">Cancelar</button>
+      <button class="btn btn-primary" onclick="arm_guardar()">🔧 Armar y registrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Entrada manual almacén -->
+<div id="modal-ajuste-almacen" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <span style="font-size:18px">📦</span>
+      <div class="modal-title">Entrada manual al almacén</div>
+      <button class="modal-close" onclick="closeModal('modal-ajuste-almacen')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-info" style="margin-bottom:14px">
+        <span>ℹ</span>
+        <span>Usa esto para agregar piezas que no venían en un XML, o para ajustar inventario.</span>
+      </div>
+      <div class="form-grid">
+        <div class="form-group full">
+          <label>Descripción *</label>
+          <input type="text" id="alm-desc" placeholder="Ej. Disco SSD 512GB Samsung">
+        </div>
+        <div class="form-group">
+          <label>Tipo</label>
+          <select id="alm-tipo-sel">
+            <option value="Componente">Componente</option>
+            <option value="Equipo">Equipo</option>
+            <option value="Consumible">Consumible</option>
+            <option value="Accesorio">Accesorio</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Marca</label>
+          <input type="text" id="alm-marca" placeholder="Samsung, WD…" list="dl-marcas">
+        </div>
+        <div class="form-group">
+          <label>Cantidad *</label>
+          <input type="number" id="alm-qty" value="1" min="1">
+        </div>
+        <div class="form-group">
+          <label>Costo unitario $</label>
+          <input type="number" id="alm-costo" placeholder="0.00" step="0.01">
+        </div>
+        <div class="form-group">
+          <label>Factura / Referencia</label>
+          <input type="text" id="alm-factura" placeholder="Ej. FAC-2024-001">
+        </div>
+        <div class="form-group">
+          <label>Fecha</label>
+          <input type="date" id="alm-fecha">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-ajuste-almacen')">Cancelar</button>
+      <button class="btn btn-primary" onclick="alm_guardarEntrada()">📦 Agregar al almacén</button>
+    </div>
+  </div>
+</div>
+  <div id="view-catalogos" class="view">
+    <div class="topbar">
+      <div><div class="topbar-title">Clasificaciones y catálogos</div></div>
+    </div>
+    <div class="content">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+
+        <!-- Tipos de equipo -->
+        <div class="table-card">
+          <div class="table-header">
+            <div class="table-title">🖥 Tipos de equipo</div>
+            <button class="btn btn-primary btn-sm" onclick="catAgregar('tiposEquipo')">+ Agregar</button>
+          </div>
+          <div id="cat-tiposEquipo-list" style="padding:8px 12px;display:flex;flex-direction:column;gap:4px;min-height:60px"></div>
+        </div>
+
+        <!-- Marcas -->
+        <div class="table-card">
+          <div class="table-header">
+            <div class="table-title">🏷 Marcas</div>
+            <button class="btn btn-primary btn-sm" onclick="catAgregar('marcas')">+ Agregar</button>
+          </div>
+          <div id="cat-marcas-list" style="padding:8px 12px;display:flex;flex-direction:column;gap:4px;min-height:60px"></div>
+        </div>
+
+        <!-- Tipos de compra -->
+        <div class="table-card">
+          <div class="table-header">
+            <div class="table-title">🛒 Tipos de compra</div>
+            <button class="btn btn-primary btn-sm" onclick="catAgregar('tiposCompra')">+ Agregar</button>
+          </div>
+          <div id="cat-tiposCompra-list" style="padding:8px 12px;display:flex;flex-direction:column;gap:4px;min-height:60px"></div>
+        </div>
+
+        <!-- Estados de resguardo -->
+        <div class="table-card">
+          <div class="table-header">
+            <div class="table-title">🔖 Estados de resguardo</div>
+            <button class="btn btn-primary btn-sm" onclick="catAgregar('estadosRes')">+ Agregar</button>
+          </div>
+          <div id="cat-estadosRes-list" style="padding:8px 12px;display:flex;flex-direction:column;gap:4px;min-height:60px"></div>
+        </div>
+
+        <!-- Áreas / Departamentos -->
+        <div class="table-card" style="grid-column:1/-1">
+          <div class="table-header">
+            <div class="table-title">🏢 Áreas / Departamentos</div>
+            <button class="btn btn-primary btn-sm" onclick="catAgregar('areas')">+ Agregar</button>
+          </div>
+          <div id="cat-areas-list" style="padding:8px 12px;display:flex;flex-wrap:wrap;gap:6px;min-height:48px"></div>
+        </div>
+
+        <!-- Empresas -->
+        <div class="table-card">
+          <div class="table-header">
+            <div class="table-title">🏛 Empresas</div>
+            <button class="btn btn-primary btn-sm" onclick="catAgregar('empresas')">+ Agregar</button>
+          </div>
+          <div style="padding:6px 12px 4px">
+            <div style="font-size:11px;color:var(--text3);margin-bottom:8px">
+              Clasifica los equipos por razón social o empresa propietaria
+            </div>
+          </div>
+          <div id="cat-empresas-list" style="padding:0 12px 10px;display:flex;flex-direction:column;gap:4px;min-height:60px"></div>
+        </div>
+
+        <!-- Centros de Costo -->
+        <div class="table-card">
+          <div class="table-header">
+            <div class="table-title">💲 Centros de costo</div>
+            <button class="btn btn-primary btn-sm" onclick="catAgregar('centrosCosto')">+ Agregar</button>
+          </div>
+          <div style="padding:6px 12px 4px">
+            <div style="font-size:11px;color:var(--text3);margin-bottom:8px">
+              Asigna los equipos a un centro contable o proyecto
+            </div>
+          </div>
+          <div id="cat-centrosCosto-list" style="padding:0 12px 10px;display:flex;flex-direction:column;gap:4px;min-height:60px"></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ══════════ MODALES ══════════ -->
+
+<!-- Modal: Nuevo Resguardo -->
+<div id="modal-resguardo" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <span style="font-size:18px">🖥</span>
+      <div class="modal-title">Nuevo resguardo</div>
+      <button class="modal-close" onclick="closeModal('modal-resguardo')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group full">
+          <label>Empleado *</label>
+          <div style="position:relative">
+            <input type="text" id="res-empleado-input" placeholder="Escribe nombre o área para buscar…" autocomplete="off" oninput="filtrarEmpleadosAC()" onfocus="filtrarEmpleadosAC()">
+            <input type="hidden" id="res-empleado">
+            <div id="res-empleado-ac" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius-sm);max-height:220px;overflow-y:auto;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,0.5);margin-top:2px"></div>
+          </div>
+          <div id="res-empleado-sel" style="display:none;margin-top:6px;padding:8px 12px;background:rgba(79,142,247,0.1);border:1px solid rgba(79,142,247,0.2);border-radius:var(--radius-sm);font-size:13px;display:flex;align-items:center;gap:8px">
+            <span id="res-empleado-sel-text" style="flex:1"></span>
+            <button type="button" onclick="limpiarEmpleadoAC()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:15px;padding:0 2px" title="Cambiar">✕</button>
+          </div>
+        </div>
+        <div class="form-group full" id="grupo-desde-compra">
+          <label>Vincular a compra <span style="color:var(--text3);font-weight:400">(opcional — solo equipos con stock)</span></label>
+          <div style="position:relative">
+            <input type="text" id="res-compra-input" placeholder="Busca por concepto, marca o modelo…" autocomplete="off" oninput="filtrarComprasAC()" onfocus="filtrarComprasAC()">
+            <input type="hidden" id="res-compra-id">
+            <div id="res-compra-ac" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius-sm);max-height:240px;overflow-y:auto;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,0.5);margin-top:2px"></div>
+          </div>
+          <div id="res-compra-sel" style="display:none;margin-top:6px;padding:10px 14px;background:rgba(45,212,191,0.08);border:1px solid rgba(45,212,191,0.2);border-radius:var(--radius-sm);font-size:13px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-size:16px">🛒</span>
+              <div style="flex:1">
+                <div id="res-compra-sel-text" style="font-weight:500"></div>
+                <div id="res-compra-sel-sub" style="font-size:11px;color:var(--text3);margin-top:2px"></div>
+              </div>
+              <button type="button" onclick="limpiarCompraAC()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:15px">✕</button>
+            </div>
+            <div style="margin-top:8px;display:flex;align-items:center;gap:6px">
+              <span style="font-size:11px;color:var(--text3)">Stock disponible:</span>
+              <span id="res-stock-badge" class="badge badge-teal"></span>
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Tipo de equipo *</label>
+          <select id="res-tipo">
+            <option value="Computadora">Computadora</option>
+            <option value="Laptop">Laptop</option>
+            <option value="Celular">Celular</option>
+            <option value="Tablet">Tablet</option>
+            <option value="Monitor">Monitor</option>
+            <option value="Impresora">Impresora</option>
+            <option value="Otro">Otro</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Modalidad *</label>
+          <select id="res-modalidad">
+            <option value="Propio">Propio</option>
+            <option value="Arrendado">Arrendado</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Marca</label>
+          <input type="text" id="res-marca" placeholder="Dell, HP, Apple…" list="dl-marcas" autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label>Modelo</label>
+          <input type="text" id="res-modelo" placeholder="Ej. Latitude 5520">
+        </div>
+        <div class="form-group">
+          <label>No. de serie *</label>
+          <input type="text" id="res-serie" placeholder="Ej. SVC1234ABC">
+        </div>
+        <div class="form-group">
+          <label>No. de inventario <span style="color:var(--teal);font-size:11px">✦ auto</span></label>
+          <input type="text" id="res-inventario" placeholder="Se genera automáticamente" style="font-family:var(--mono)">
+        </div>
+        <div class="form-group">
+          <label>Fecha de asignación *</label>
+          <input type="date" id="res-fecha">
+        </div>
+        <div class="form-group" id="grupo-arrendamiento" style="display:none">
+          <label>Fin de arrendamiento</label>
+          <input type="date" id="res-fin-arr">
+        </div>
+        <div class="form-group">
+          <label>Estado</label>
+          <select id="res-estado">
+            <option value="Activo">Activo</option>
+            <option value="En revisión">En revisión</option>
+            <option value="Baja">Baja</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Empresa</label>
+          <select id="res-empresa"></select>
+        </div>
+        <div class="form-group">
+          <label>Centro de costo</label>
+          <select id="res-centro"></select>
+        </div>
+        <div class="form-group full">
+          <label>Observaciones</label>
+          <textarea id="res-obs" placeholder="Notas adicionales…"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-resguardo')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarResguardo()">💾 Guardar resguardo</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Nueva Compra (3 modos) -->
+<div id="modal-compra" class="modal-overlay">
+  <div class="modal" style="width:660px">
+    <div class="modal-header">
+      <span style="font-size:18px">🛒</span>
+      <div class="modal-title">Registrar compra</div>
+      <button class="modal-close" onclick="closeModal('modal-compra')">✕</button>
+    </div>
+    <div class="modal-body" style="padding-top:12px">
+
+      <!-- Tabs de modo -->
+      <div style="display:flex;gap:4px;background:var(--bg3);border-radius:8px;padding:4px;margin-bottom:18px">
+        <button class="comp-tab active" id="tab-xml"    onclick="switchCompTab('xml')"    style="flex:1;padding:7px;border:none;border-radius:6px;font-family:var(--font);font-size:13px;cursor:pointer;background:var(--bg2);color:var(--text);transition:all .15s">📄 Desde XML</button>
+        <button class="comp-tab"        id="tab-manual" onclick="switchCompTab('manual')" style="flex:1;padding:7px;border:none;border-radius:6px;font-family:var(--font);font-size:13px;cursor:pointer;background:transparent;color:var(--text2);transition:all .15s">✏️ Manual</button>
+      </div>
+
+      <!-- ── TAB XML ── -->
+      <div id="comp-panel-xml">
+        <div class="import-zone" id="xml-dropzone" onclick="document.getElementById('xml-file-input').click()"
+          ondragover="event.preventDefault();this.classList.add('drag')"
+          ondragleave="this.classList.remove('drag')"
+          ondrop="event.preventDefault();this.classList.remove('drag');procesarXMLFiles(event.dataTransfer.files)">
+          <div class="import-icon">📄</div>
+          <div class="import-title">Arrastra tus archivos XML aquí</div>
+          <div class="import-sub">o haz clic para seleccionar · Puedes cargar varios a la vez</div>
+        </div>
+        <input type="file" id="xml-file-input" accept=".xml" multiple style="display:none" onchange="procesarXMLFiles(this.files)">
+
+        <!-- Partidas leídas del XML -->
+        <div id="xml-partidas-container" style="display:none;margin-top:16px">
+
+          <!-- Info factura + botón nueva partida -->
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+            <div style="font-size:13px;font-weight:500;flex:1">Partidas de la factura</div>
+            <div id="xml-factura-info" style="font-size:11px;color:var(--text3)"></div>
+          </div>
+
+          <!-- Lista de partidas -->
+          <div id="xml-partidas-list" style="display:flex;flex-direction:column;gap:6px;max-height:300px;overflow-y:auto"></div>
+
+          <!-- Alertas de sobrantes -->
+          <div id="xml-sobrantes-zone" style="display:none;margin-top:12px"></div>
+
+          <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px">
+            <button class="btn btn-ghost btn-sm" onclick="limpiarXML()">✕ Cancelar</button>
+            <div style="flex:1"></div>
+            <button class="btn btn-primary" onclick="guardarPartidasXML()">💾 Guardar todo</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── TAB MANUAL ── -->
+      <div id="comp-panel-manual" style="display:none">
+        <!-- Encabezado de factura -->
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:16px">
+          <div style="font-size:11px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px">Datos de la factura</div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Proveedor</label>
+              <input type="text" id="m-proveedor" placeholder="Nombre del proveedor">
+            </div>
+            <div class="form-group">
+              <label>RFC proveedor</label>
+              <input type="text" id="m-rfc" placeholder="Ej. ABC010101XYZ" style="font-family:var(--mono)">
+            </div>
+            <div class="form-group">
+              <label>No. factura *</label>
+              <input type="text" id="m-factura" placeholder="Ej. FAC-2024-0321">
+            </div>
+            <div class="form-group">
+              <label>Fecha *</label>
+              <input type="date" id="m-fecha">
+            </div>
+          </div>
+        </div>
+        <!-- Partidas manuales -->
+        <div style="font-size:13px;font-weight:500;margin-bottom:8px">Partidas <span style="color:var(--text3);font-weight:400;font-size:12px">— agrega una o más</span></div>
+        <div id="m-partidas-list" style="display:flex;flex-direction:column;gap:8px;max-height:280px;overflow-y:auto;margin-bottom:10px"></div>
+        <button class="btn btn-ghost btn-sm" onclick="agregarPartidaManual()" style="width:100%;justify-content:center">+ Agregar partida</button>
+        <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px">
+          <button class="btn btn-ghost btn-sm" onclick="closeModal('modal-compra')">Cancelar</button>
+          <button class="btn btn-primary" onclick="guardarPartidasManuales()">💾 Guardar compra</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Empleado -->
+<div id="modal-empleado" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <span style="font-size:18px">👤</span>
+      <div class="modal-title">Agregar empleado</div>
+      <button class="modal-close" onclick="closeModal('modal-empleado')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group full">
+          <label>Nombre completo *</label>
+          <input type="text" id="emp-nombre" placeholder="Nombre y apellidos">
+        </div>
+        <div class="form-group">
+          <label>Área / Departamento</label>
+          <input type="text" id="emp-area" placeholder="Ej. Contabilidad" list="dl-areas" autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label>Cargo / Puesto</label>
+          <input type="text" id="emp-cargo" placeholder="Ej. Analista">
+        </div>
+        <div class="form-group full">
+          <label>Email</label>
+          <input type="email" id="emp-email" placeholder="correo@empresa.com">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-empleado')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarEmpleado()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Equipo catálogo -->
+<div id="modal-equipo-cat" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <span style="font-size:18px">📦</span>
+      <div class="modal-title">Agregar equipo al catálogo</div>
+      <button class="modal-close" onclick="closeModal('modal-equipo-cat')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Marca *</label>
+          <input type="text" id="ecat-marca" placeholder="Dell, HP, Apple…" list="dl-marcas" autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label>Modelo *</label>
+          <input type="text" id="ecat-modelo" placeholder="Ej. Latitude 5520">
+        </div>
+        <div class="form-group">
+          <label>Tipo</label>
+          <select id="ecat-tipo">
+            <option value="Laptop">Laptop</option>
+            <option value="Computadora">Computadora</option>
+            <option value="Celular">Celular</option>
+            <option value="Tablet">Tablet</option>
+            <option value="Monitor">Monitor</option>
+            <option value="Otro">Otro</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Precio referencia ($)</label>
+          <input type="number" id="ecat-precio" placeholder="0.00">
+        </div>
+        <div class="form-group full">
+          <label>Especificaciones</label>
+          <textarea id="ecat-specs" placeholder="RAM, procesador, almacenamiento…"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-equipo-cat')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarEquipoCat()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Importar Empleados -->
+<div id="modal-import-empleados" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <span style="font-size:18px">📥</span>
+      <div class="modal-title">Importar empleados desde Excel</div>
+      <button class="modal-close" onclick="closeModal('modal-import-empleados')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-info">
+        <span>ℹ</span>
+        <div>El archivo Excel debe tener las columnas: <br><strong>Nombre, Area, Cargo, Email</strong> (en la primera fila)</div>
+      </div>
+      <div class="import-zone" id="drop-emp" onclick="document.getElementById('file-emp').click()">
+        <div class="import-icon">📄</div>
+        <div class="import-title">Haz clic o arrastra tu archivo aquí</div>
+        <div class="import-sub">.xlsx, .xls, .csv</div>
+      </div>
+      <input type="file" id="file-emp" accept=".xlsx,.xls,.csv" style="display:none" onchange="importarEmpleados(this)">
+      <div id="preview-emp" style="margin-top:14px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-import-empleados')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Importar Compras -->
+<div id="modal-import-compras" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <span style="font-size:18px">📥</span>
+      <div class="modal-title">Importar compras desde Excel</div>
+      <button class="modal-close" onclick="closeModal('modal-import-compras')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-info">
+        <span>ℹ</span>
+        <div>Columnas esperadas: <strong>Concepto, Tipo, Proveedor, Cantidad, Costo, Fecha, Factura, Notas</strong></div>
+      </div>
+      <div class="import-zone" onclick="document.getElementById('file-comp').click()">
+        <div class="import-icon">📄</div>
+        <div class="import-title">Haz clic o arrastra tu archivo aquí</div>
+        <div class="import-sub">.xlsx, .xls, .csv</div>
+      </div>
+      <input type="file" id="file-comp" accept=".xlsx,.xls,.csv" style="display:none" onchange="importarCompras(this)">
+      <div id="preview-comp" style="margin-top:14px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-import-compras')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Importar Resguardos -->
+<div id="modal-import-resguardos" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <span style="font-size:18px">📥</span>
+      <div class="modal-title">Importar resguardos desde Excel</div>
+      <button class="modal-close" onclick="closeModal('modal-import-resguardos')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-info">
+        <span>ℹ</span>
+        <div>Columnas esperadas: <strong>Empleado, Tipo, Modalidad, Marca, Modelo, Serie, Inventario, Fecha, Estado</strong></div>
+      </div>
+      <div class="import-zone" onclick="document.getElementById('file-res').click()">
+        <div class="import-icon">📄</div>
+        <div class="import-title">Haz clic o arrastra tu archivo aquí</div>
+        <div class="import-sub">.xlsx, .xls, .csv</div>
+      </div>
+      <input type="file" id="file-res" accept=".xlsx,.xls,.csv" style="display:none" onchange="importarResguardos(this)">
+      <div id="preview-res" style="margin-top:14px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-import-resguardos')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" style="position:fixed;bottom:24px;right:24px;z-index:9999;display:none">
+  <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:12px 18px;font-size:13px;box-shadow:var(--shadow);display:flex;align-items:center;gap:10px;min-width:220px">
+    <span id="toast-icon">✅</span>
+    <span id="toast-msg">Guardado correctamente</span>
+  </div>
+</div>
+
+<script>
+// ─── ESTADO GLOBAL ───────────────────────────────────────────────
+// ─── FIREBASE CONFIG ─────────────────────────────────────────────
+const firebaseConfig = {
+  apiKey: "AIzaSyBvYckqHTgn-Lm9OtYtf7rB4tGitjmPZ4c",
+  authDomain: "morgan-ti.firebaseapp.com",
+  projectId: "morgan-ti",
+  storageBucket: "morgan-ti.firebasestorage.app",
+  messagingSenderId: "224300076721",
+  appId: "1:224300076721:web:66fc950fa6a8d8a924dc90"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db   = firebase.firestore();
+
+// ─── AUTH ─────────────────────────────────────────────────────────
+function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-pass').value;
+  const btn   = document.getElementById('login-btn');
+  const err   = document.getElementById('login-error');
+  if (!email || !pass) { mostrarErrorLogin('Ingresa correo y contraseña'); return; }
+  btn.textContent = 'Entrando…';
+  btn.disabled = true;
+  auth.signInWithEmailAndPassword(email, pass)
+    .catch(e => {
+      btn.textContent = 'Entrar';
+      btn.disabled = false;
+      const msgs = {
+        'auth/user-not-found':  'Usuario no encontrado',
+        'auth/wrong-password':  'Contraseña incorrecta',
+        'auth/invalid-email':   'Correo inválido',
+        'auth/too-many-requests':'Demasiados intentos. Intenta más tarde',
+        'auth/invalid-credential': 'Correo o contraseña incorrectos'
+      };
+      mostrarErrorLogin(msgs[e.code] || 'Error al iniciar sesión');
+    });
+}
+
+function mostrarErrorLogin(msg) {
+  const el = document.getElementById('login-error');
+  el.textContent = msg;
+  el.style.display = '';
+}
+
+function doLogout() {
+  if (confirm('¿Cerrar sesión?')) auth.signOut();
+}
+
+// ─── ESTADO GLOBAL ───────────────────────────────────────────────
+let DB = {
+  resguardos: [],
+  compras: [],
+  empleados: [],
+  equiposCat: [],
+  almacen: [],
+  catalogos: {
+    tiposEquipo:  ['Laptop','Computadora','Celular','Tablet','Monitor','Impresora','Servidor','Workstation','Switch','Router','UPS','Otro'],
+    marcas:       ['Dell','HP','Lenovo','Apple','Samsung','Acer','Asus','Huawei','LG','Toshiba','Epson','Canon','Cisco','Hikvision'],
+    tiposCompra:  ['Equipo','Consumible','Accesorio','Licencia','Componente','Flete','Servicio'],
+    estadosRes:   ['Activo','En revisión','En reparación','Baja','Préstamo'],
+    areas:        ['TI','Contabilidad','Ventas','RRHH','Dirección','Administración','Producción','Almacén','Marketing','Jurídico'],
+    empresas:     ['Empresa Principal'],
+    centrosCosto: ['CC-001 General']
+  },
+  plantillas: []
+};
+
+// ─── FIRESTORE: guardar y cargar ─────────────────────────────────
+// Cada colección en Firestore: resguardos, compras, empleados, almacen, config (catalogos+plantillas)
+
+let _dbListeners = [];  // para cancelar listeners al hacer logout
+
+function guardarDB() {
+  // guardarDB ahora es async — cada módulo llama a su función específica
+  // Se mantiene por compatibilidad pero en Firebase guardamos por documento
+}
+
+async function fbGuardar(coleccion, item) {
+  if (!item.id) item.id = Date.now() + Math.random();
+  await db.collection(coleccion).doc(String(item.id)).set(item);
+}
+
+async function fbEliminar(coleccion, id) {
+  await db.collection(coleccion).doc(String(id)).delete();
+}
+
+async function fbGuardarConfig() {
+  await db.collection('config').doc('catalogos').set(DB.catalogos);
+  await db.collection('config').doc('plantillas').set({ lista: DB.plantillas || [] });
+}
+
+// ─── ESCUCHAR CAMBIOS EN TIEMPO REAL ─────────────────────────────
+function iniciarListeners() {
+  // Cancelar listeners anteriores
+  _dbListeners.forEach(u => u());
+  _dbListeners = [];
+
+  const colecciones = ['resguardos','compras','empleados','almacen','equiposCat'];
+  colecciones.forEach(col => {
+    const unsub = db.collection(col).onSnapshot(snap => {
+      DB[col] = snap.docs.map(d => d.data());
+      // Re-renderizar la vista activa
+      refrescarVistaActiva();
+      actualizarBadges();
+    });
+    _dbListeners.push(unsub);
+  });
+
+  // Config (catálogos y plantillas)
+  const unsubCat = db.collection('config').doc('catalogos').onSnapshot(snap => {
+    if (snap.exists) {
+      DB.catalogos = snap.data();
+      if (!DB.catalogos.empresas)     DB.catalogos.empresas     = ['Empresa Principal'];
+      if (!DB.catalogos.centrosCosto) DB.catalogos.centrosCosto = ['CC-001 General'];
+      poblarSelectsCatalogos();
+      renderCatalogos();
+    }
+  });
+  _dbListeners.push(unsubCat);
+
+  const unsubPlt = db.collection('config').doc('plantillas').onSnapshot(snap => {
+    if (snap.exists) DB.plantillas = snap.data().lista || [];
+  });
+  _dbListeners.push(unsubPlt);
+}
+
+function refrescarVistaActiva() {
+  const activa = document.querySelector('.view.active');
+  if (!activa) return;
+  const id = activa.id.replace('view-','');
+  const mapa = {
+    dashboard:   renderDashboard,
+    resguardos:  renderResguardos,
+    compras:     renderCompras,
+    almacen:     renderAlmacen,
+    armar:       renderArmarVista,
+    empleados:   renderEmpleados,
+    'equipos-cat': renderEquiposCat,
+    catalogos:   renderCatalogos
+  };
+  if (mapa[id]) mapa[id]();
+}
+
+// ─── REEMPLAZAR guardarDB por funciones Firebase ─────────────────
+// Interceptar las llamadas a DB.xxx.push() → guardar en Firestore
+// La estrategia: sobrescribir guardarDB para sincronizar la colección entera
+const _colecciones = ['resguardos','compras','empleados','almacen','equiposCat'];
+
+async function guardarColeccion(col) {
+  const batch = db.batch();
+  DB[col].forEach(item => {
+    const ref = db.collection(col).doc(String(item.id));
+    batch.set(ref, item);
+  });
+  await batch.commit();
+}
+
+// Parche: redefinir guardarDB para usar Firestore
+function guardarDB() {
+  // Detectar qué colecciones cambiaron comparando con snapshot anterior
+  // Estrategia simple: guardar todas las colecciones activas
+  _colecciones.forEach(col => {
+    if (DB[col] && DB[col].length >= 0) guardarColeccion(col);
+  });
+  fbGuardarConfig();
+}
+
+// ─── NAVEGACIÓN ──────────────────────────────────────────────────
+function switchView(view) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('view-' + view).classList.add('active');
+
+  const map = {
+    dashboard: 0, resguardos: 1, compras: 2, almacen: 3, armar: 4,
+    empleados: 5, 'equipos-cat': 6, catalogos: 7
+  };
+  const items = document.querySelectorAll('.nav-item');
+  const idx = map[view];
+  if (idx !== undefined && items[idx]) items[idx].classList.add('active');
+
+  if (view === 'dashboard')   renderDashboard();
+  if (view === 'resguardos')  renderResguardos();
+  if (view === 'compras')     renderCompras();
+  if (view === 'almacen')     renderAlmacen();
+  if (view === 'armar')       renderArmarVista();
+  if (view === 'empleados')   renderEmpleados();
+  if (view === 'equipos-cat') renderEquiposCat();
+  if (view === 'catalogos')   renderCatalogos();
+}
+
+// ─── MODAL ───────────────────────────────────────────────────────
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+  if (id === 'modal-resguardo') {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('res-fecha').value = today;
+    // Limpiar campos
+    ['res-tipo','res-modalidad','res-marca','res-modelo','res-serie','res-obs'].forEach(f => {
+      const el = document.getElementById(f);
+      if (el) { el.tagName === 'SELECT' ? el.selectedIndex = 0 : (el.value = ''); }
+    });
+    document.getElementById('res-inventario').value = '';
+    document.getElementById('res-inventario').style.background = '';
+    document.getElementById('res-inventario').style.borderColor = '';
+    document.getElementById('grupo-arrendamiento').style.display = 'none';
+    // Empresa y centro: dejar el primero del catálogo como default
+    const selEmp = document.getElementById('res-empresa');
+    const selCen = document.getElementById('res-centro');
+    if (selEmp && selEmp.options.length) selEmp.selectedIndex = 0;
+    if (selCen && selCen.options.length) selCen.selectedIndex = 0;
+    limpiarEmpleadoAC();
+    limpiarCompraAC();
+  }
+  if (id === 'modal-compra') {
+    const today = new Date().toISOString().split('T')[0];
+    switchCompTab('xml');
+    limpiarXML();
+    partidasManuales = [];
+    renderPartidasManuales();
+    document.getElementById('m-fecha').value = today;
+    document.getElementById('m-proveedor').value = '';
+    document.getElementById('m-rfc').value = '';
+    document.getElementById('m-factura').value = '';
+  }
+  if (id === 'modal-armar') {
+    arm_lineas = [];
+    arm_renderLineas();
+    ['arm-nombre','arm-prefijo'].forEach(id2 => { const el = document.getElementById(id2); if(el) el.value=''; });
+    const cantEl = document.getElementById('arm-cantidad'); if(cantEl) cantEl.value='1';
+    // Poblar select de tipo desde catálogo
+    const selTipo = document.getElementById('arm-tipo');
+    if (selTipo && DB.catalogos?.tiposEquipo) {
+      selTipo.innerHTML = DB.catalogos.tiposEquipo.map(t=>`<option value="${t}">${t}</option>`).join('');
+    }
+    // Resetear indicadores de costo
+    const lbl = document.getElementById('arm-costo-unit'); if(lbl) lbl.textContent='$0.00';
+    const tot = document.getElementById('arm-total-label'); if(tot) tot.textContent='$0.00';
+    const az  = document.getElementById('arm-alerta-stock'); if(az) az.style.display='none';
+  }
+  if (id === 'modal-ajuste-almacen') {
+    const today = new Date().toISOString().split('T')[0];
+    ['alm-desc','alm-marca','alm-factura'].forEach(id2 => { const el=document.getElementById(id2); if(el) el.value=''; });
+    const qEl=document.getElementById('alm-qty'); if(qEl) qEl.value='1';
+    const cEl=document.getElementById('alm-costo'); if(cEl) cEl.value='';
+    const fEl=document.getElementById('alm-fecha'); if(fEl) fEl.value=today;
+  }
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+});
+
+// Mostrar/ocultar campo fin arrendamiento
+document.getElementById('res-modalidad').addEventListener('change', function() {
+  document.getElementById('grupo-arrendamiento').style.display = this.value === 'Arrendado' ? '' : 'none';
+});
+
+// ─── TOAST ───────────────────────────────────────────────────────
+function toast(msg, icon = '✅') {
+  const t = document.getElementById('toast');
+  document.getElementById('toast-msg').textContent = msg;
+  document.getElementById('toast-icon').textContent = icon;
+  t.style.display = 'block';
+  setTimeout(() => { t.style.display = 'none'; }, 3000);
+}
+
+// ─── HELPERS ─────────────────────────────────────────────────────
+function formatFecha(s) {
+  if (!s) return '—';
+  const d = new Date(s + 'T12:00:00');
+  return d.toLocaleDateString('es-MX', { day:'2-digit', month:'short', year:'numeric' });
+}
+
+function calcAntiguedad(fecha) {
+  if (!fecha) return { texto: '—', meses: 0 };
+  const d = new Date(fecha + 'T12:00:00');
+  const now = new Date();
+  const meses = (now.getFullYear() - d.getFullYear()) * 12 + (now.getMonth() - d.getMonth());
+  if (meses < 1) return { texto: 'Este mes', meses: 0 };
+  if (meses < 12) return { texto: meses + ' meses', meses };
+  const años = Math.floor(meses / 12);
+  const m = meses % 12;
+  return { texto: años + 'a ' + (m > 0 ? m + 'm' : ''), meses };
+}
+
+function badgeModalidad(m) {
+  return m === 'Arrendado'
+    ? '<span class="badge badge-amber">🔄 Arrendado</span>'
+    : '<span class="badge badge-blue">✅ Propio</span>';
+}
+
+function badgeEstado(e) {
+  const map = {
+    'Activo': 'badge-green',
+    'En revisión': 'badge-amber',
+    'Baja': 'badge-red'
+  };
+  return `<span class="badge ${map[e] || 'badge-gray'}">${e}</span>`;
+}
+
+function badgeTipoComp(t) {
+  const map = {
+    'Equipo': 'badge-blue',
+    'Consumible': 'badge-teal',
+    'Accesorio': 'badge-purple',
+    'Licencia': 'badge-amber'
+  };
+  return `<span class="badge ${map[t] || 'badge-gray'}">${t}</span>`;
+}
+
+function formatMoney(n) {
+  return '$' + Number(n || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+// ─── EMPLEADOS ───────────────────────────────────────────────────
+function llenarSelectEmpleados() {
+  // Solo limpiar el campo al abrir el modal
+  limpiarEmpleadoAC();
+}
+
+function filtrarEmpleadosAC() {
+  const input = document.getElementById('res-empleado-input');
+  const ac = document.getElementById('res-empleado-ac');
+  const q = input.value.toLowerCase().trim();
+  const resultados = q.length === 0
+    ? DB.empleados.slice(0, 12)
+    : DB.empleados.filter(e =>
+        e.nombre.toLowerCase().includes(q) ||
+        (e.area || '').toLowerCase().includes(q) ||
+        (e.cargo || '').toLowerCase().includes(q)
+      ).slice(0, 12);
+
+  if (!resultados.length) {
+    ac.style.display = 'block';
+    ac.innerHTML = '<div style="padding:12px 14px;font-size:13px;color:var(--text3)">Sin resultados para "' + input.value + '"</div>';
+    return;
+  }
+  ac.style.display = 'block';
+  ac.innerHTML = resultados.map((e, i) => `
+    <div class="ac-item" onclick="seleccionarEmpleadoAC('${e.nombre.replace(/'/g,"\\'")}','${(e.area||'').replace(/'/g,"\\'")}','${(e.cargo||'').replace(/'/g,"\\'")}',${i})"
+      style="padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);transition:background 0.1s"
+      onmouseover="this.style.background='rgba(79,142,247,0.08)'"
+      onmouseout="this.style.background='transparent'">
+      <div style="width:30px;height:30px;border-radius:50%;background:rgba(79,142,247,0.15);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:var(--accent);flex-shrink:0">${e.nombre.charAt(0).toUpperCase()}</div>
+      <div>
+        <div style="font-size:13px;font-weight:500;color:var(--text)">${resaltarTexto(e.nombre, q)}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:1px">${e.area || ''}${e.area && e.cargo ? ' · ' : ''}${e.cargo || ''}</div>
+      </div>
+    </div>`).join('');
+}
+
+function resaltarTexto(texto, q) {
+  if (!q) return texto;
+  const re = new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+  return texto.replace(re, '<mark style="background:rgba(79,142,247,0.25);color:var(--accent);border-radius:2px;padding:0 1px">$1</mark>');
+}
+
+function seleccionarEmpleadoAC(nombre, area, cargo, idx) {
+  document.getElementById('res-empleado').value = nombre;
+  document.getElementById('res-empleado-input').value = '';
+  document.getElementById('res-empleado-ac').style.display = 'none';
+  const sel = document.getElementById('res-empleado-sel');
+  sel.style.display = 'flex';
+  document.getElementById('res-empleado-sel-text').innerHTML =
+    '<span style="font-size:14px">👤</span><span style="font-weight:500">' + nombre + '</span>' +
+    (area ? '<span style="color:var(--text3);font-size:12px">· ' + area + (cargo ? ', ' + cargo : '') + '</span>' : '');
+  document.getElementById('res-empleado-input').style.display = 'none';
+}
+
+function limpiarEmpleadoAC() {
+  document.getElementById('res-empleado').value = '';
+  document.getElementById('res-empleado-input').value = '';
+  document.getElementById('res-empleado-input').style.display = '';
+  document.getElementById('res-empleado-ac').style.display = 'none';
+  document.getElementById('res-empleado-sel').style.display = 'none';
+}
+
+// Cerrar autocomplete al hacer clic fuera
+document.addEventListener('click', e => {
+  const ac = document.getElementById('res-empleado-ac');
+  const input = document.getElementById('res-empleado-input');
+  if (ac && input && !ac.contains(e.target) && e.target !== input) {
+    ac.style.display = 'none';
+  }
+});
+
+function guardarEmpleado() {
+  const nombre = document.getElementById('emp-nombre').value.trim();
+  if (!nombre) { toast('Escribe el nombre del empleado', '⚠️'); return; }
+  DB.empleados.push({
+    id: Date.now(),
+    nombre,
+    area: document.getElementById('emp-area').value.trim(),
+    cargo: document.getElementById('emp-cargo').value.trim(),
+    email: document.getElementById('emp-email').value.trim()
+  });
+  guardarDB();
+  closeModal('modal-empleado');
+  renderEmpleados();
+  actualizarBadges();
+  toast('Empleado registrado');
+  ['emp-nombre','emp-area','emp-cargo','emp-email'].forEach(id => document.getElementById(id).value = '');
+}
+
+function renderEmpleados() {
+  const q = (document.getElementById('search-empleados')?.value || '').toLowerCase();
+  const rows = DB.empleados.filter(e =>
+    e.nombre.toLowerCase().includes(q) || (e.area||'').toLowerCase().includes(q)
+  );
+  const tbody = document.getElementById('empleados-tbody');
+  document.getElementById('emp-count-label').textContent = rows.length + ' empleados';
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">👤</div><div class="empty-title">Sin empleados registrados</div><div class="empty-sub">Agrega empleados o importa desde Excel</div></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map((e, i) => {
+    const equipos = DB.resguardos.filter(r => r.empleado === e.nombre && r.estado === 'Activo').length;
+    return `<tr>
+      <td class="mono">${i+1}</td>
+      <td><strong>${e.nombre}</strong></td>
+      <td class="text-sm">${e.area || '—'}</td>
+      <td class="text-sm">${e.cargo || '—'}</td>
+      <td class="text-sm">${e.email || '—'}</td>
+      <td><span class="badge ${equipos > 0 ? 'badge-blue' : 'badge-gray'}">${equipos} equipo${equipos !== 1 ? 's' : ''}</span></td>
+      <td><div class="row-actions">
+        <button class="icon-btn del" onclick="eliminar('empleados',${e.id},'renderEmpleados')">🗑</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+// ─── RESGUARDOS ──────────────────────────────────────────────────
+
+// Autocompletado de compras en resguardo
+function filtrarComprasAC() {
+  const input = document.getElementById('res-compra-input');
+  const ac = document.getElementById('res-compra-ac');
+  const q = input.value.toLowerCase().trim();
+  const equipos = DB.compras.filter(c => c.tipo === 'Equipo');
+  const resultados = (q.length === 0
+    ? equipos
+    : equipos.filter(c =>
+        c.concepto.toLowerCase().includes(q) ||
+        (c.marca||'').toLowerCase().includes(q) ||
+        (c.modelo||'').toLowerCase().includes(q)
+      )
+  ).slice(0, 10);
+
+  if (!resultados.length) {
+    ac.style.display = 'block';
+    ac.innerHTML = '<div style="padding:12px 14px;font-size:13px;color:var(--text3)">Sin equipos' + (q ? ' para "'+q+'"' : ' registrados en compras') + '</div>';
+    return;
+  }
+  ac.style.display = 'block';
+  ac.innerHTML = resultados.map(c => {
+    const stock = stockDisponible(c.id);
+    const stockColor = stock > 0 ? 'var(--teal)' : 'var(--red)';
+    const stockTxt = stock > 0 ? stock + ' disp.' : 'Sin stock';
+    return `<div onclick="seleccionarCompraAC(${c.id})"
+      style="padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);transition:background 0.1s;${stock===0?'opacity:0.5':''}"
+      onmouseover="this.style.background='rgba(45,212,191,0.07)'"
+      onmouseout="this.style.background='transparent'">
+      <div style="width:32px;height:32px;border-radius:6px;background:rgba(45,212,191,0.12);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0">🛒</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:500;color:var(--text)">${c.concepto}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:1px">${[c.marca,c.modelo].filter(Boolean).join(' ')||'Sin especificaciones'} · ${c.proveedor||'Sin proveedor'} · FAC: ${c.factura||'—'}</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-size:11px;font-weight:600;color:${stockColor}">${stockTxt}</div>
+        <div style="font-size:10px;color:var(--text3)">${c.cantidad} comprados</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function seleccionarCompraAC(compraId) {
+  const compra = DB.compras.find(c => c.id == compraId);
+  if (!compra) return;
+  const stock = stockDisponible(compraId);
+
+  document.getElementById('res-compra-id').value = compraId;
+  document.getElementById('res-compra-input').value = '';
+  document.getElementById('res-compra-input').style.display = 'none';
+  document.getElementById('res-compra-ac').style.display = 'none';
+
+  document.getElementById('res-compra-sel').style.display = '';
+  document.getElementById('res-compra-sel-text').textContent = compra.concepto;
+  document.getElementById('res-compra-sel-sub').textContent =
+    [compra.marca, compra.modelo].filter(Boolean).join(' ') + (compra.proveedor ? ' · ' + compra.proveedor : '') + (compra.factura ? ' · FAC: ' + compra.factura : '');
+  document.getElementById('res-stock-badge').textContent = stock + ' disponible' + (stock !== 1 ? 's' : '');
+  document.getElementById('res-stock-badge').className = 'badge ' + (stock > 0 ? 'badge-teal' : 'badge-red');
+
+  // Auto-rellenar campos del resguardo
+  if (compra.tipoEquipo) {
+    document.getElementById('res-tipo').value = compra.tipoEquipo;
+  }
+  if (compra.marca) document.getElementById('res-marca').value = compra.marca;
+  if (compra.modelo) document.getElementById('res-modelo').value = compra.modelo;
+
+  // Generar número de inventario automático
+  const invAuto = siguienteInventario(compra);
+  document.getElementById('res-inventario').value = invAuto;
+  document.getElementById('res-inventario').style.background = 'rgba(45,212,191,0.07)';
+  document.getElementById('res-inventario').style.borderColor = 'rgba(45,212,191,0.3)';
+
+  if (stock === 0) {
+    toast('Este equipo ya no tiene stock disponible', '⚠️');
+  }
+}
+
+function limpiarCompraAC() {
+  document.getElementById('res-compra-id').value = '';
+  document.getElementById('res-compra-input').value = '';
+  document.getElementById('res-compra-input').style.display = '';
+  document.getElementById('res-compra-ac').style.display = 'none';
+  document.getElementById('res-compra-sel').style.display = 'none';
+  document.getElementById('res-inventario').value = '';
+  document.getElementById('res-inventario').style.background = '';
+  document.getElementById('res-inventario').style.borderColor = '';
+}
+
+// Cerrar AC de compras al clic fuera
+document.addEventListener('click', e => {
+  const ac2 = document.getElementById('res-compra-ac');
+  const inp2 = document.getElementById('res-compra-input');
+  if (ac2 && inp2 && !ac2.contains(e.target) && e.target !== inp2) ac2.style.display = 'none';
+});
+
+function guardarResguardo() {
+  const empleado = document.getElementById('res-empleado').value;
+  const serie = document.getElementById('res-serie').value.trim();
+  const fecha = document.getElementById('res-fecha').value;
+  if (!empleado) { toast('Busca y selecciona un empleado', '⚠️'); return; }
+  if (!serie) { toast('Ingresa el número de serie', '⚠️'); return; }
+  if (!fecha) { toast('Selecciona la fecha de asignación', '⚠️'); return; }
+
+  const compraId = document.getElementById('res-compra-id')?.value || null;
+  if (compraId && stockDisponible(compraId) <= 0) {
+    toast('Este equipo ya no tiene stock disponible', '⚠️'); return;
+  }
+
+  DB.resguardos.push({
+    id: Date.now(),
+    empleado,
+    compraId: compraId || null,
+    tipo:             document.getElementById('res-tipo').value,
+    modalidad:        document.getElementById('res-modalidad').value,
+    marca:            document.getElementById('res-marca').value.trim(),
+    modelo:           document.getElementById('res-modelo').value.trim(),
+    serie,
+    inventario:       document.getElementById('res-inventario').value.trim(),
+    fecha,
+    finArrendamiento: document.getElementById('res-fin-arr').value,
+    estado:           document.getElementById('res-estado').value,
+    empresa:          document.getElementById('res-empresa').value,
+    centroCosto:      document.getElementById('res-centro').value,
+    obs:              document.getElementById('res-obs').value.trim()
+  });
+  guardarDB();
+  limpiarCompraAC();
+  closeModal('modal-resguardo');
+  renderResguardos();
+  renderCompras();
+  actualizarBadges();
+  toast('Resguardo guardado correctamente');
+}
+
+function renderResguardos() {
+  const q            = (document.getElementById('search-resguardos')?.value || '').toLowerCase();
+  const filtroTipo   = document.getElementById('filter-tipo-res')?.value    || '';
+  const filtroEmp    = document.getElementById('filter-empresa-res')?.value || '';
+  const filtroCentro = document.getElementById('filter-centro-res')?.value  || '';
+
+  let rows = DB.resguardos.filter(r =>
+    (r.empleado.toLowerCase().includes(q) || (r.serie||'').toLowerCase().includes(q) ||
+     (r.marca||'').toLowerCase().includes(q) || (r.modelo||'').toLowerCase().includes(q) ||
+     (r.empresa||'').toLowerCase().includes(q) || (r.centroCosto||'').toLowerCase().includes(q)) &&
+    (!filtroTipo   || r.tipo        === filtroTipo)   &&
+    (!filtroEmp    || r.empresa     === filtroEmp)    &&
+    (!filtroCentro || r.centroCosto === filtroCentro)
+  );
+
+  const tbody = document.getElementById('resguardos-tbody');
+  document.getElementById('res-count-label').textContent = rows.length + ' registros';
+
+  const arr = DB.resguardos.filter(r => r.modalidad === 'Arrendado').length;
+  document.getElementById('res-stat-total').textContent = DB.resguardos.length;
+  document.getElementById('res-stat-arr').textContent   = arr;
+  document.getElementById('res-stat-prop').textContent  = DB.resguardos.length - arr;
+
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="12"><div class="empty-state"><div class="empty-icon">🖥</div><div class="empty-title">Sin resguardos</div><div class="empty-sub">Registra tu primer resguardo o importa desde Excel</div></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map((r, i) => {
+    const ant   = calcAntiguedad(r.fecha);
+    const pct   = Math.min(100, (ant.meses / 36) * 100);
+    const color = pct > 75 ? '#ef4444' : pct > 50 ? '#f59e0b' : '#22c55e';
+
+    const empresaBadge = r.empresa
+      ? `<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.25);color:#fb923c;white-space:nowrap">${r.empresa}</span>`
+      : '<span class="text-muted">—</span>';
+
+    const centroBadge = r.centroCosto
+      ? `<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:rgba(236,72,153,0.1);border:1px solid rgba(236,72,153,0.25);color:#f472b6;white-space:nowrap">${r.centroCosto}</span>`
+      : '<span class="text-muted">—</span>';
+
+    return `<tr>
+      <td class="mono">${i+1}</td>
+      <td><strong>${r.empleado}</strong></td>
+      <td class="text-sm">${getAreaEmpleado(r.empleado)}</td>
+      <td>${empresaBadge}</td>
+      <td>${centroBadge}</td>
+      <td><span class="badge badge-gray">${r.tipo}</span><br><span class="text-muted" style="font-size:11px">${r.marca||''} ${r.modelo||''}</span></td>
+      <td class="mono">${r.serie}</td>
+      <td>${badgeModalidad(r.modalidad)}${r.modalidad==='Arrendado'&&r.finArrendamiento?'<br><span class="text-sm">hasta '+formatFecha(r.finArrendamiento)+'</span>':''}</td>
+      <td class="text-sm">${formatFecha(r.fecha)}</td>
+      <td><div class="age-bar">
+        <div class="age-track"><div class="age-fill" style="width:${pct}%;background:${color}"></div></div>
+        <span class="text-sm">${ant.texto}</span>
+      </div></td>
+      <td>${badgeEstado(r.estado)}</td>
+      <td><div class="row-actions">
+        <button class="icon-btn del" onclick="eliminar('resguardos',${r.id},'renderResguardos')">🗑</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+function getAreaEmpleado(nombre) {
+  const emp = DB.empleados.find(e => e.nombre === nombre);
+  return emp ? (emp.area || '—') : '—';
+}
+
+// ─── COMPRAS — TABS ──────────────────────────────────────────────
+function switchCompTab(tab) {
+  if (tab === 'ensamble') tab = 'xml'; // redirigir cualquier referencia legacy
+  ['xml','manual'].forEach(t => {
+    const panel = document.getElementById('comp-panel-' + t);
+    const btn   = document.getElementById('tab-' + t);
+    if (panel) panel.style.display = t === tab ? '' : 'none';
+    if (btn) {
+      btn.style.background = t === tab ? 'var(--bg2)' : 'transparent';
+      btn.style.color      = t === tab ? 'var(--text)' : 'var(--text2)';
+    }
+  });
+}
+
+// ─── MODO XML ────────────────────────────────────────────────────
+let xmlPartidasActuales = [];
+let xmlEnsambles = [];       // ensambles definidos en el flujo XML
+
+function procesarXMLFiles(files) {
+  xmlPartidasActuales = [];
+  xmlEnsambles = [];
+  _xmlFilesCache = files;  // guardar para "forzar carga"
+  let procesados = 0;
+  const duplicados = [];
+
+  Array.from(files).forEach(file => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const parser = new DOMParser();
+      const xml = parser.parseFromString(e.target.result, 'text/xml');
+
+      // Extraer UUID del timbre fiscal (identificador único CFDI)
+      const timbre = xml.querySelector('TimbreFiscalDigital');
+      const uuid   = timbre
+        ? (timbre.getAttribute('UUID') || timbre.getAttribute('uuid') || '').toUpperCase()
+        : '';
+
+      // Fallback folio+RFC+fecha para XMLs sin timbre
+      const cfdi   = xml.querySelector('Comprobante') || xml.documentElement;
+      const emisor = xml.querySelector('Emisor');
+      const rfc    = emisor ? (emisor.getAttribute('Rfc') || emisor.getAttribute('rfc') || '') : '';
+      const folio  = (cfdi.getAttribute('Serie')||'') + (cfdi.getAttribute('Folio')||'');
+      const fecha  = (cfdi.getAttribute('Fecha')||'').substring(0,10);
+
+      // Verificar duplicado
+      const esDuplicado = uuid
+        ? DB.compras.some(c => c.uuid && c.uuid === uuid)
+        : (folio && rfc && DB.compras.some(c => c.factura === folio && c.rfc === rfc && c.fecha === fecha));
+
+      if (esDuplicado) {
+        duplicados.push({ file: file.name, label: uuid || `${folio} · ${rfc}` });
+      } else {
+        const partidas = extraerPartidasXML(xml, file.name, uuid);
+        xmlPartidasActuales.push(...partidas);
+      }
+
+      procesados++;
+      if (procesados === files.length) {
+        if (duplicados.length) mostrarAlertaDuplicados(duplicados, xmlPartidasActuales.length > 0);
+        if (xmlPartidasActuales.length) renderPartidasXML();
+        else if (!duplicados.length) toast('No se encontraron partidas en el XML', '⚠️');
+      }
+    };
+    reader.readAsText(file, 'UTF-8');
+  });
+}
+
+function mostrarAlertaDuplicados(duplicados, hayOtrasPartidas) {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:10000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px)';
+  overlay.innerHTML = `
+    <div style="background:var(--bg2);border:1px solid rgba(245,158,11,0.4);border-radius:12px;width:440px;max-width:95vw;padding:24px;box-shadow:0 8px 40px rgba(0,0,0,0.5)">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+        <div style="font-size:24px">⚠️</div>
+        <div>
+          <div style="font-size:14px;font-weight:600;color:var(--amber)">
+            ${duplicados.length === 1 ? 'Este XML ya fue registrado' : duplicados.length + ' XMLs ya fueron registrados'}
+          </div>
+          <div style="font-size:12px;color:var(--text3);margin-top:2px">
+            ${hayOtrasPartidas ? 'Los demás archivos sí se cargaron correctamente.' : 'No se cargó ninguna partida.'}
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px">
+        ${duplicados.map(d => `
+          <div style="padding:8px 12px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:6px">
+            <div style="font-size:12px;font-weight:500;color:var(--text)">${d.file}</div>
+            <div style="font-size:10px;color:var(--text3);margin-top:2px;font-family:var(--mono);word-break:break-all">${d.label}</div>
+          </div>`).join('')}
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button onclick="this.closest('[style*=fixed]').remove()"
+          style="background:var(--bg3);border:1px solid var(--border2);color:var(--text2);border-radius:6px;padding:7px 16px;font-size:13px;font-family:var(--font);cursor:pointer">
+          ${hayOtrasPartidas ? 'Entendido' : 'Cerrar'}
+        </button>
+        <button onclick="this.closest('[style*=fixed]').remove();forzarCargaXML()"
+          style="background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.3);color:var(--amber);border-radius:6px;padding:7px 16px;font-size:13px;font-family:var(--font);cursor:pointer">
+          Cargar de todas formas
+        </button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
+}
+
+// Guardar los archivos cargados para reintento si el usuario fuerza
+let _xmlFilesCache = null;
+function forzarCargaXML() {
+  if (!_xmlFilesCache) return;
+  xmlPartidasActuales = [];
+  xmlEnsambles = [];
+  let procesados = 0;
+  Array.from(_xmlFilesCache).forEach(file => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const parser = new DOMParser();
+      const xml = parser.parseFromString(e.target.result, 'text/xml');
+      const partidas = extraerPartidasXML(xml, file.name, '');
+      xmlPartidasActuales.push(...partidas);
+      procesados++;
+      if (procesados === _xmlFilesCache.length) renderPartidasXML();
+    };
+    reader.readAsText(file, 'UTF-8');
+  });
+}
+
+function extraerPartidasXML(xml, filename, uuid) {
+  const cfdi      = xml.querySelector('Comprobante') || xml.documentElement;
+  const emisorNode= xml.querySelector('Emisor');
+  const proveedor = emisorNode ? (emisorNode.getAttribute('Nombre') || emisorNode.getAttribute('nombre') || '') : '';
+  const rfc       = emisorNode ? (emisorNode.getAttribute('Rfc')    || emisorNode.getAttribute('rfc')    || '') : '';
+  const fecha     = (cfdi.getAttribute('Fecha') || cfdi.getAttribute('fecha') || '').substring(0,10);
+  const folio     = cfdi.getAttribute('Folio')  || cfdi.getAttribute('folio')  || '';
+  const serie     = cfdi.getAttribute('Serie')  || cfdi.getAttribute('serie')  || '';
+  const factura   = (serie + folio).trim() || filename.replace('.xml','');
+  // UUID del timbre si no viene del caller
+  if (!uuid) {
+    const timbre = xml.querySelector('TimbreFiscalDigital');
+    uuid = timbre ? (timbre.getAttribute('UUID') || timbre.getAttribute('uuid') || '').toUpperCase() : '';
+  }
+
+  const conceptos = xml.querySelectorAll('Concepto');
+  const partidas  = [];
+  conceptos.forEach((c, i) => {
+    const desc    = c.getAttribute('Descripcion') || c.getAttribute('descripcion') || c.getAttribute('Description') || 'Partida ' + (i+1);
+    const qty     = parseFloat(c.getAttribute('Cantidad')      || c.getAttribute('cantidad')      || 1);
+    const vu      = parseFloat(c.getAttribute('ValorUnitario') || c.getAttribute('valorUnitario') || c.getAttribute('valorunitario') || 0);
+    const importe = parseFloat(c.getAttribute('Importe')       || c.getAttribute('importe')       || qty * vu);
+    const clave   = c.getAttribute('ClaveProdServ') || c.getAttribute('claveProdServ') || '';
+    partidas.push({
+      id: Date.now() + Math.random(),
+      proveedor, rfc, factura, fecha, uuid,
+      desc, qty, vu, importe, clave,
+      tipo:       inferirTipo(desc, clave),
+      tipoEquipo: inferirTipoEquipo(desc),
+      marca: '', modelo: '', prefijo: '',
+      incluir: true,
+      ensambleAsign: null
+    });
+  });
+  return partidas.length ? partidas : [{
+    id: Date.now(), proveedor, rfc, factura, fecha, uuid,
+    desc: 'Partida de ' + filename, qty:1, vu:0, importe:0, clave:'',
+    tipo:'Consumible', tipoEquipo:'', marca:'', modelo:'', prefijo:'',
+    incluir:true, ensambleAsign:null
+  }];
+}
+
+function inferirTipo(desc, clave) {
+  const d = desc.toLowerCase();
+  if (/flete|env[ií]o|shipping|transporte|mensajer[ií]a|paqueter[ií]a|courier|entrega|acarreo|estafeta|fedex|dhl|ups\b/.test(d)) return 'Flete';
+  if (/laptop|computadora|pc\b|servidor|tablet|celular|tel[eé]fono|monitor|impresora|switch|router|ups(?! )/.test(d)) return 'Equipo';
+  if (/t[oó]ner|cartucho|papel|resma|cable|mouse|teclado|memoria usb|pila|bater[ií]a/.test(d)) return 'Consumible';
+  if (/licencia|software|suscripci[oó]n|office|windows|antivirus/.test(d)) return 'Licencia';
+  if (/disco|ssd|hdd|nvme|ram|dimm|procesador|cpu|motherboard|tarjeta madre|fuente|gabinete|ventilador|cooler|case\b/.test(d)) return 'Componente';
+  return 'Consumible';
+}
+
+function inferirTipoEquipo(desc) {
+  const d = desc.toLowerCase();
+  if (/laptop|notebook/.test(d)) return 'Laptop';
+  if (/computadora|pc\b|desktop/.test(d)) return 'Computadora';
+  if (/celular|smartphone|tel[eé]fono/.test(d)) return 'Celular';
+  if (/tablet/.test(d)) return 'Tablet';
+  if (/monitor/.test(d)) return 'Monitor';
+  if (/impresora/.test(d)) return 'Impresora';
+  return 'Otro';
+}
+
+const TIPO_COLORS = {
+  'Equipo':     { bg:'rgba(79,142,247,0.12)',  border:'rgba(79,142,247,0.3)',  text:'#7eb3fa' },
+  'Consumible': { bg:'rgba(45,212,191,0.10)',  border:'rgba(45,212,191,0.25)', text:'var(--teal)' },
+  'Licencia':   { bg:'rgba(245,158,11,0.10)',  border:'rgba(245,158,11,0.25)', text:'var(--amber)' },
+  'Componente': { bg:'rgba(167,139,250,0.10)', border:'rgba(167,139,250,0.25)',text:'var(--purple)' },
+  'Flete':      { bg:'rgba(249,115,22,0.10)',  border:'rgba(249,115,22,0.28)', text:'#fb923c' },
+  'Accesorio':  { bg:'rgba(255,255,255,0.05)', border:'var(--border2)',        text:'var(--text2)' },
+};
+
+// ── Prorrateo de fletes ─────────────────────────────────────────
+// Devuelve { [idx_partida]: montoProrrateo } para cada partida prorrateable
+function calcularProrrateo() {
+  const seleccionadas = xmlPartidasActuales.filter(p => p.incluir);
+  const fletes    = seleccionadas.filter(p => p.tipo === 'Flete' && p.prorratear !== false);
+  const base      = seleccionadas.filter(p => p.tipo !== 'Flete'); // todas las no-flete reciben prorrateo
+
+  if (!fletes.length || !base.length) return {};
+
+  const totalFlete  = fletes.reduce((s, p) => s + p.importe, 0);
+  const totalBase   = base.reduce((s, p) => s + p.importe,   0);
+  if (totalBase === 0) return {};
+
+  const result = {};
+  base.forEach((p, _) => {
+    const idx = xmlPartidasActuales.indexOf(p);
+    result[idx] = (p.importe / totalBase) * totalFlete;
+  });
+  return result;
+}
+
+// ── Render principal de partidas XML ────────────────────────────
+function renderPartidasXML() {
+  const container = document.getElementById('xml-partidas-container');
+  const list      = document.getElementById('xml-partidas-list');
+  container.style.display = '';
+
+  const facturas  = [...new Set(xmlPartidasActuales.map(p => p.factura))];
+  const proveedor = xmlPartidasActuales[0]?.proveedor || '';
+  document.getElementById('xml-factura-info').textContent =
+    (proveedor ? proveedor + ' · ' : '') + facturas.join(', ');
+
+  const hayComps = xmlPartidasActuales.some(p => p.tipo === 'Componente' && p.incluir);
+
+  // Calcular prorrateo actual para mostrar badges
+  const prorrateoMap = calcularProrrateo();
+  const hayFlete     = xmlPartidasActuales.some(p => p.tipo === 'Flete' && p.incluir && p.prorratear !== false);
+
+  list.innerHTML = xmlPartidasActuales.map((p, i) => {
+    const c        = TIPO_COLORS[p.tipo] || TIPO_COLORS['Accesorio'];
+    const esEquipo = p.tipo === 'Equipo';
+    const esComp   = p.tipo === 'Componente';
+    const esFlete  = p.tipo === 'Flete';
+    const ens = p.ensambleAsign
+      ? xmlEnsambles.find(e => e.id === p.ensambleAsign.ensambleId)
+      : null;
+
+    // Badge de prorrateo que recibirá esta partida
+    const montoProrr = prorrateoMap[i];
+    const prorBadge  = (hayFlete && montoProrr !== undefined && montoProrr > 0)
+      ? `<span title="Flete prorrateado incluido" style="font-size:10px;padding:2px 7px;border-radius:10px;background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.25);color:#fb923c">+${formatMoney(montoProrr)} flete</span>`
+      : '';
+
+    return `<div id="partida-xml-${i}" style="background:var(--bg3);border:1px solid ${esFlete ? 'rgba(249,115,22,0.3)' : ens ? 'rgba(167,139,250,0.35)' : 'var(--border)'};border-radius:8px;padding:12px;transition:opacity .15s;${!p.incluir?'opacity:.38':''}">
+      <div style="display:flex;align-items:flex-start;gap:10px">
+        <input type="checkbox" ${p.incluir?'checked':''} onchange="togglePartidaXML(${i},this.checked)"
+          style="margin-top:3px;accent-color:var(--accent);width:15px;height:15px;flex-shrink:0;cursor:pointer">
+        <div style="flex:1;min-width:0">
+
+          <!-- Fila top -->
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+            <span style="font-size:13px;font-weight:500">${p.desc}</span>
+            <span style="font-size:10px;padding:2px 8px;border-radius:10px;background:${c.bg};border:1px solid ${c.border};color:${c.text}">${p.tipo}</span>
+            ${ens ? `<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:rgba(167,139,250,0.12);border:1px solid rgba(167,139,250,0.3);color:var(--purple)">🔧 ${ens.nombre}</span>` : ''}
+            ${prorBadge}
+            <span style="font-size:11px;color:var(--text3);margin-left:auto">
+              ${p.qty} × ${formatMoney(p.vu)} = <strong style="color:var(--text)">${formatMoney(p.importe)}</strong>
+              ${montoProrr > 0 ? `<span style="color:#fb923c"> → ${formatMoney(p.importe + montoProrr)}</span>` : ''}
+            </span>
+          </div>
+
+          <!-- Fila controles: FLETE -->
+          ${esFlete ? `
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:rgba(249,115,22,0.06);border-radius:6px">
+            <span style="font-size:12px;color:#fb923c">🚚</span>
+            <span style="font-size:12px;color:var(--text2);flex:1">Prorratear entre todas las partidas de esta factura</span>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--text2)">
+              <span>Activado</span>
+              <div style="position:relative;width:32px;height:18px;background:${p.prorratear!==false?'#fb923c':'var(--bg)'};border-radius:9px;transition:background .2s;border:1px solid var(--border2);flex-shrink:0">
+                <div onclick="toggleFleteProrrateo(${i})" style="position:absolute;top:2px;left:${p.prorratear!==false?'14px':'2px'};width:12px;height:12px;background:white;border-radius:50%;transition:left .2s;cursor:pointer"></div>
+              </div>
+            </label>
+            ${p.prorratear===false ? `<span style="font-size:11px;color:var(--text3)">— se registrará como gasto aparte</span>` :
+              `<span style="font-size:11px;color:#fb923c">÷ ${xmlPartidasActuales.filter(pp=>pp.incluir&&pp.tipo!=='Flete').length} partidas</span>`}
+          </div>` : `
+          <!-- Fila controles: normal -->
+          <div style="display:grid;grid-template-columns:120px ${esEquipo||esComp?'1fr 1fr':'1fr'} ${esEquipo?'72px':''} ${esComp?'auto':''};gap:6px;align-items:end">
+
+            <div>
+              <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Clasificación</div>
+              <select onchange="cambiarTipoXML(${i},this.value)"
+                style="background:var(--bg2);border:1px solid var(--border2);border-radius:4px;padding:5px 6px;color:var(--text);font-size:12px;font-family:var(--font);width:100%">
+                ${['Equipo','Consumible','Licencia','Componente','Flete','Accesorio'].map(t =>
+                  `<option value="${t}" ${p.tipo===t?'selected':''}>${t}</option>`).join('')}
+              </select>
+            </div>
+
+            ${esEquipo||esComp ? `<div>
+              <div style="font-size:10px;color:var(--text3);margin-bottom:3px">${esComp?'Descripción corta':'Marca'}</div>
+              <input type="text" value="${p.marca}" placeholder="${esComp?'Kingston 16GB DDR5':'Dell, HP…'}"
+                list="dl-marcas" autocomplete="off"
+                onchange="xmlPartidasActuales[${i}].marca=this.value"
+                style="background:var(--bg2);border:1px solid var(--border2);border-radius:4px;padding:5px 6px;color:var(--text);font-size:12px;font-family:var(--font);width:100%;outline:none">
+            </div>` : `<div></div>`}
+
+            ${esEquipo ? `<div>
+              <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Modelo</div>
+              <input type="text" value="${p.modelo}" placeholder="Latitude 5520…"
+                onchange="xmlPartidasActuales[${i}].modelo=this.value"
+                style="background:var(--bg2);border:1px solid var(--border2);border-radius:4px;padding:5px 6px;color:var(--text);font-size:12px;font-family:var(--font);width:100%;outline:none">
+            </div>` : ''}
+
+            ${esEquipo ? `<div>
+              <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Prefijo</div>
+              <input type="text" value="${p.prefijo}" placeholder="LAP"
+                onchange="xmlPartidasActuales[${i}].prefijo=this.value"
+                style="background:var(--bg2);border:1px solid var(--border2);border-radius:4px;padding:5px 6px;color:var(--text);font-size:12px;font-family:var(--font);width:100%;outline:none">
+            </div>` : ''}
+
+            ${esComp && !ens && p.incluir ? `<div style="padding-bottom:1px">
+              <div style="font-size:10px;color:transparent;margin-bottom:3px">·</div>
+              <button onclick="abrirAsignarEnsamble(${i})"
+                style="background:rgba(167,139,250,0.12);border:1px solid rgba(167,139,250,0.3);color:var(--purple);border-radius:4px;padding:5px 8px;font-size:11px;font-family:var(--font);cursor:pointer;white-space:nowrap">
+                + Ensamble
+              </button>
+            </div>` : ''}
+
+            ${ens ? `<div style="padding-bottom:1px">
+              <div style="font-size:10px;color:transparent;margin-bottom:3px">·</div>
+              <button onclick="quitarDeEnsamble(${i})"
+                style="background:rgba(167,139,250,0.07);border:1px solid rgba(167,139,250,0.2);color:var(--purple);border-radius:4px;padding:5px 8px;font-size:11px;font-family:var(--font);cursor:pointer">
+                ✕ Quitar
+              </button>
+            </div>` : ''}
+
+          </div>`}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  renderEnsamblesBadge();
+  actualizarBotonRevisar();
+  renderResumenFlete();
+}
+
+function togglePartidaXML(i, val) {
+  xmlPartidasActuales[i].incluir = val;
+  if (!val && xmlPartidasActuales[i].ensambleAsign) {
+    xmlPartidasActuales[i].ensambleAsign = null;
+  }
+  renderPartidasXML();
+}
+
+function cambiarTipoXML(i, tipo) {
+  xmlPartidasActuales[i].tipo = tipo;
+  if (tipo !== 'Componente') xmlPartidasActuales[i].ensambleAsign = null;
+  if (tipo !== 'Flete') delete xmlPartidasActuales[i].prorratear;
+  renderPartidasXML();
+}
+
+function toggleFleteProrrateo(i) {
+  xmlPartidasActuales[i].prorratear = xmlPartidasActuales[i].prorratear === false ? true : false;
+  renderPartidasXML();
+}
+
+function renderResumenFlete() {
+  const prorrateoMap = calcularProrrateo();
+  const fletes = xmlPartidasActuales.filter(p => p.tipo === 'Flete' && p.incluir && p.prorratear !== false);
+  const zone   = document.getElementById('xml-sobrantes-zone');
+  if (!fletes.length) { renderSobrantesZone(); return; }
+
+  const totalFlete = fletes.reduce((s,p) => s + p.importe, 0);
+  const nPartidas  = Object.keys(prorrateoMap).length;
+
+  // Mostrar resumen arriba de sobrantes (o solo él si no hay sobrantes)
+  const resumenHTML = `
+    <div style="background:rgba(249,115,22,0.07);border:1px solid rgba(249,115,22,0.25);border-radius:8px;padding:12px;margin-bottom:10px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <span style="font-size:14px">🚚</span>
+        <span style="font-size:13px;font-weight:500;color:#fb923c">Resumen de prorrateo de flete</span>
+        <span style="font-size:11px;color:var(--text3);margin-left:auto">Total flete: <strong style="color:#fb923c">${formatMoney(totalFlete)}</strong> ÷ ${nPartidas} partidas</span>
+      </div>
+      <div style="font-size:11px;color:var(--text2)">
+        El flete se distribuirá proporcionalmente al valor de cada partida. El costo guardado ya incluirá el flete prorrateado.
+        Las partidas de tipo Flete <strong>no se guardarán como registro independiente</strong>.
+      </div>
+    </div>`;
+
+  // Preservar zona de sobrantes si existe
+  const sobrantesActual = zone.querySelector('[data-sobrantes]');
+  zone.style.display = '';
+  zone.innerHTML = resumenHTML + (sobrantesActual ? sobrantesActual.outerHTML : '');
+  renderSobrantesContent();
+}
+
+function renderSobrantesZone() {
+  const zone = document.getElementById('xml-sobrantes-zone');
+  zone.innerHTML = '';
+  renderSobrantesContent();
+}
+
+function renderSobrantesContent() {
+  // Re-inyectar sobrantes si existen (la verificarSobrantes los pinta dentro de la zone)
+  verificarSobrantes();
+}
+
+function actualizarBotonRevisar() {
+  const hayComps = xmlPartidasActuales.some(p => p.tipo === 'Componente' && p.incluir);
+  // btn-revisar-ensambles eliminado junto con el tab Ensamble
+}
+
+// ── ENSAMBLES dentro del flujo XML ─────────────────────────────
+function abrirAsignarEnsamble(partida_i) {
+  const p = xmlPartidasActuales[partida_i];
+  // Modal inline: crear ensamble nuevo o elegir existente
+  const existentes = xmlEnsambles.map((e, ei) =>
+    `<div onclick="asignarAEnsamble(${partida_i},${ei})"
+      style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px"
+      onmouseover="this.style.background='rgba(167,139,250,0.08)'"
+      onmouseout="this.style.background='transparent'">
+      <span style="font-size:15px">🔧</span>
+      <div><div style="font-size:13px;font-weight:500">${e.nombre}</div>
+      <div style="font-size:11px;color:var(--text3)">${e.cantidad} equipo${e.cantidad>1?'s':''} · ${componentesDeEnsamble(ei).length} componente${componentesDeEnsamble(ei).length!==1?'s':''} asignado${componentesDeEnsamble(ei).length!==1?'s':''}</div></div>
+    </div>`
+  ).join('');
+
+  const overlay = document.createElement('div');
+  overlay.id = 'ens-popup';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:10000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px)';
+  overlay.innerHTML = `
+    <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:12px;width:420px;max-width:95vw;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.5)">
+      <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">
+        <span style="font-size:16px">🔧</span>
+        <div style="font-size:14px;font-weight:600;flex:1">Asignar a ensamble</div>
+        <button onclick="document.getElementById('ens-popup').remove()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px">✕</button>
+      </div>
+      <div style="padding:16px 20px">
+        <div style="font-size:12px;color:var(--text3);margin-bottom:10px">Partida: <strong style="color:var(--text)">${p.desc}</strong> (${p.qty} piezas)</div>
+        ${existentes ? `<div style="font-size:12px;font-weight:500;color:var(--text2);margin-bottom:6px">Agregar a ensamble existente:</div>
+        <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:14px;max-height:160px;overflow-y:auto">${existentes}</div>` : ''}
+        <div style="font-size:12px;font-weight:500;color:var(--text2);margin-bottom:8px">${existentes?'O crear':'Crear'} nuevo ensamble:</div>
+        <div style="display:grid;grid-template-columns:1fr 80px;gap:8px;margin-bottom:8px">
+          <div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Nombre del equipo a ensamblar</div>
+            <input id="ens-new-nombre" type="text" placeholder="Ej. PC Ensamblada Contabilidad"
+              style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;color:var(--text);font-size:13px;font-family:var(--font);width:100%;outline:none">
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Cantidad</div>
+            <input id="ens-new-cantidad" type="number" value="${p.qty}" min="1"
+              style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;color:var(--text);font-size:13px;font-family:var(--font);width:100%;outline:none;text-align:right">
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+          <div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Tipo de equipo</div>
+            <select id="ens-new-tipo" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;color:var(--text);font-size:13px;font-family:var(--font);width:100%">
+              <option>Computadora</option><option>Workstation</option><option>Servidor</option>
+            </select>
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Prefijo inventario</div>
+            <input id="ens-new-prefijo" type="text" placeholder="PC-ENS"
+              style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;color:var(--text);font-size:13px;font-family:var(--font);width:100%;outline:none">
+          </div>
+        </div>
+        <button onclick="crearEnsambleYAsignar(${partida_i})"
+          style="width:100%;background:var(--purple);border:none;color:white;border-radius:6px;padding:9px;font-size:13px;font-weight:500;font-family:var(--font);cursor:pointer">
+          Crear ensamble y asignar esta partida
+        </button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
+}
+
+function componentesDeEnsamble(ei) {
+  return xmlPartidasActuales.filter(p => p.ensambleAsign && p.ensambleAsign.ensambleId === xmlEnsambles[ei]?.id);
+}
+
+function asignarAEnsamble(partida_i, ei) {
+  const ens = xmlEnsambles[ei];
+  const p   = xmlPartidasActuales[partida_i];
+  const qtyPorEquipo = Math.round(p.qty / ens.cantidad) || 1;
+  xmlPartidasActuales[partida_i].ensambleAsign = { ensambleId: ens.id, qtyPorEquipo };
+  document.getElementById('ens-popup')?.remove();
+  renderPartidasXML();
+  verificarSobrantes();
+}
+
+function crearEnsambleYAsignar(partida_i) {
+  const nombre   = document.getElementById('ens-new-nombre').value.trim();
+  const cantidad = parseInt(document.getElementById('ens-new-cantidad').value) || 1;
+  if (!nombre) { document.getElementById('ens-new-nombre').focus(); return; }
+  const ens = {
+    id:       Date.now() + Math.random(),
+    nombre,
+    cantidad,
+    tipo:     document.getElementById('ens-new-tipo').value,
+    prefijo:  document.getElementById('ens-new-prefijo').value.trim() || 'PC-ENS',
+    factura:  xmlPartidasActuales[partida_i]?.factura || '',
+    fecha:    xmlPartidasActuales[partida_i]?.fecha   || '',
+    proveedor:xmlPartidasActuales[partida_i]?.proveedor || '',
+  };
+  xmlEnsambles.push(ens);
+  document.getElementById('ens-popup')?.remove();
+  asignarAEnsamble(partida_i, xmlEnsambles.length - 1);
+}
+
+function quitarDeEnsamble(i) {
+  xmlPartidasActuales[i].ensambleAsign = null;
+  renderPartidasXML();
+  verificarSobrantes();
+}
+
+// ── Render badges de ensambles ──────────────────────────────────
+function renderEnsamblesBadge() {
+  // Zona de ensambles eliminada — función mantenida por compatibilidad
+}
+
+function revisarEnsambles() {
+  // Función eliminada con el tab Ensamble
+}
+
+// ── Detección de sobrantes ──────────────────────────────────────
+function verificarSobrantes() {
+  const zone = document.getElementById('xml-sobrantes-zone');
+
+  const sobrantes = [];
+  xmlPartidasActuales.forEach((p, i) => {
+    if (!p.ensambleAsign || !p.incluir) return;
+    const ens = xmlEnsambles.find(e => e.id === p.ensambleAsign.ensambleId);
+    if (!ens) return;
+    const necesario = p.ensambleAsign.qtyPorEquipo * ens.cantidad;
+    const sobran    = p.qty - necesario;
+    if (sobran > 0) sobrantes.push({ i, p, ens, necesario, sobran });
+  });
+
+  // Preservar resumen de flete si existe
+  const resumenFlete = zone.querySelector('div[style*="rgba(249,115,22"]');
+  const resumenHTML  = resumenFlete ? resumenFlete.outerHTML : '';
+
+  if (!sobrantes.length) {
+    zone.style.display = resumenHTML ? '' : 'none';
+    if (resumenHTML) zone.innerHTML = resumenHTML;
+    return;
+  }
+  zone.style.display = '';
+  zone.innerHTML = resumenHTML + `
+    <div data-sobrantes="1" style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:8px;padding:14px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <span style="font-size:16px">⚠️</span>
+        <div style="font-size:13px;font-weight:500;color:var(--amber)">Piezas sobrantes detectadas</div>
+      </div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:10px">
+        Las siguientes partidas tienen más piezas de las necesarias para los ensambles. ¿Cómo deseas registrar el sobrante?
+      </div>
+      ${sobrantes.map(({i, p, ens, necesario, sobran}) => `
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin-bottom:8px">
+          <div style="font-size:12px;margin-bottom:6px">
+            <strong>${p.desc}</strong> —
+            <span style="color:var(--purple)">${necesario} para ensamble</span> ·
+            <span style="color:var(--amber);font-weight:600">${sobran} sobran</span>
+            <span style="color:var(--text3)">(${formatMoney(p.vu * sobran)})</span>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <button onclick="resolverSobrante(${i},'consumible')"
+              style="background:rgba(45,212,191,0.1);border:1px solid rgba(45,212,191,0.25);color:var(--teal);border-radius:5px;padding:5px 10px;font-size:11px;font-family:var(--font);cursor:pointer">
+              📦 Stock consumible (${sobran} piezas)
+            </button>
+            <button onclick="resolverSobrante(${i},'otro-ensamble')"
+              style="background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.25);color:var(--purple);border-radius:5px;padding:5px 10px;font-size:11px;font-family:var(--font);cursor:pointer">
+              🔧 Asignar a otro ensamble
+            </button>
+            <button onclick="resolverSobrante(${i},'ignorar')"
+              style="background:rgba(255,255,255,0.04);border:1px solid var(--border2);color:var(--text3);border-radius:5px;padding:5px 10px;font-size:11px;font-family:var(--font);cursor:pointer">
+              Incluir todo en el ensamble
+            </button>
+          </div>
+        </div>`).join('')}
+    </div>`;
+}
+
+function revisarEnsambles() {
+  // Función eliminada con el tab Ensamble — sin acción
+}
+
+function resolverSobrante(i, accion) {
+  const p   = xmlPartidasActuales[i];
+  const ens = xmlEnsambles.find(e => e.id === p.ensambleAsign?.ensambleId);
+  if (!ens) return;
+  const necesario = (p.ensambleAsign.qtyPorEquipo || 1) * ens.cantidad;
+  const sobran    = p.qty - necesario;
+
+  if (accion === 'consumible') {
+    // Separar la partida: la original queda con qty=necesario, se agrega nueva como consumible
+    xmlPartidasActuales[i] = { ...p, qty: necesario, importe: necesario * p.vu };
+    xmlPartidasActuales.push({
+      ...p,
+      id:          Date.now() + Math.random(),
+      qty:         sobran,
+      importe:     sobran * p.vu,
+      tipo:        'Consumible',
+      incluir:     true,
+      ensambleAsign: null,
+      desc:        p.desc + ' (stock repuesto)',
+    });
+    toast(`${sobran} piezas separadas como consumible`, '📦');
+  } else if (accion === 'otro-ensamble') {
+    // Separar y abrir popup para asignar
+    xmlPartidasActuales[i] = { ...p, qty: necesario, importe: necesario * p.vu };
+    const nueva_i = xmlPartidasActuales.length;
+    xmlPartidasActuales.push({
+      ...p,
+      id:          Date.now() + Math.random(),
+      qty:         sobran,
+      importe:     sobran * p.vu,
+      tipo:        'Componente',
+      incluir:     true,
+      ensambleAsign: null,
+      desc:        p.desc + ' (sobrante)',
+    });
+    renderPartidasXML();
+    setTimeout(() => abrirAsignarEnsamble(nueva_i), 100);
+    return;
+  } else if (accion === 'ignorar') {
+    // Todo va al ensamble, recalcular qtyPorEquipo
+    xmlPartidasActuales[i].ensambleAsign.qtyPorEquipo = Math.ceil(p.qty / ens.cantidad);
+  }
+  renderPartidasXML();
+  verificarSobrantes();
+}
+
+// ── Guardar todo el XML ─────────────────────────────────────────
+function guardarPartidasXML() {
+  // Validar sobrantes sin resolver
+  const sobrantes = xmlPartidasActuales.filter(p => {
+    if (!p.ensambleAsign || !p.incluir) return false;
+    const ens = xmlEnsambles.find(e => e.id === p.ensambleAsign.ensambleId);
+    if (!ens) return false;
+    return p.qty - (p.ensambleAsign.qtyPorEquipo * ens.cantidad) > 0;
+  });
+  if (sobrantes.length) {
+    verificarSobrantes();
+    document.getElementById('xml-sobrantes-zone').scrollIntoView({ behavior:'smooth', block:'nearest' });
+    toast('Resuelve los sobrantes antes de guardar', '⚠️');
+    return;
+  }
+
+  const seleccionadas = xmlPartidasActuales.filter(p => p.incluir);
+  if (!seleccionadas.length) { toast('Selecciona al menos una partida', '⚠️'); return; }
+
+  // Validar que ninguna partida incluida tenga descripción vacía
+  const sinDesc = seleccionadas.filter(p => !p.desc || !p.desc.trim());
+  if (sinDesc.length) {
+    toast(`${sinDesc.length} partida${sinDesc.length>1?'s tienen':' tiene'} descripción vacía`, '⚠️');
+    return;
+  }
+
+  // Calcular prorrateo final
+  const prorrateoMap = calcularProrrateo();
+  const importeConFlete = (p, i) => p.importe + (prorrateoMap[i] || 0);
+  const vuConFlete      = (p, i) => p.vu     + (prorrateoMap[i] || 0) / (p.qty || 1);
+
+  // Guardar partidas (todas salvo fletes activos que se absorben)
+  const partidas = seleccionadas.filter(p =>
+    !(p.tipo === 'Flete' && p.prorratear !== false)
+  );
+  partidas.forEach(p => {
+    const i        = xmlPartidasActuales.indexOf(p);
+    const esEquipo = p.tipo === 'Equipo';
+    const impFinal = importeConFlete(p, i);
+    const vuFinal  = vuConFlete(p, i);
+    const notaF    = prorrateoMap[i] > 0
+      ? `(incluye ${formatMoney(prorrateoMap[i])} de flete prorrateado)` : '';
+    const compraId = Date.now() + Math.random();
+    DB.compras.push({
+      id:         compraId,
+      uuid:       p.uuid || '',
+      concepto:   p.desc,
+      tipo:       p.tipo,
+      tipoEquipo: esEquipo ? p.tipoEquipo : '',
+      marca:      p.marca,
+      modelo:     p.modelo,
+      prefijo:    esEquipo ? (p.prefijo || 'TI') : '',
+      proveedor:  p.proveedor,
+      rfc:        p.rfc,
+      cantidad:   p.qty,
+      costo:      vuFinal,
+      total:      impFinal,
+      fecha:      p.fecha,
+      factura:    p.factura,
+      notas:      notaF,
+      origen:     'xml'
+    });
+    // Componentes y Equipos también van al almacén
+    if (p.tipo === 'Componente' || p.tipo === 'Equipo') {
+      alm_ingresarDesdeXML({ ...p, vu: vuFinal, compraId });
+    }
+  });
+
+  // Fletes que el usuario decidió NO prorratear → gasto aparte
+  const fletesNoProrrateados = seleccionadas.filter(p => p.tipo === 'Flete' && p.prorratear === false);
+  fletesNoProrrateados.forEach(p => {
+    DB.compras.push({
+      id: Date.now() + Math.random(),
+      concepto: p.desc, tipo: 'Consumible', tipoEquipo: '', marca: '', modelo: '', prefijo: '',
+      proveedor: p.proveedor, rfc: p.rfc, cantidad: p.qty, costo: p.vu, total: p.importe,
+      fecha: p.fecha, factura: p.factura, notas: 'Flete / envío', origen: 'xml'
+    });
+  });
+
+  const totalGuardados   = partidas.length + fletesNoProrrateados.length;
+  const fletesAbsorbidos = seleccionadas.filter(p => p.tipo==='Flete' && p.prorratear!==false).length;
+
+  guardarDB();
+  closeModal('modal-compra');
+  limpiarXML();
+  renderCompras();
+  if (typeof renderAlmacen === 'function') renderAlmacen();
+  actualizarBadges();
+  toast(`${totalGuardados} registro${totalGuardados>1?'s':''} guardado${totalGuardados>1?'s':''}${fletesAbsorbidos ? ' · flete prorrateado ✓' : ''}`);
+}
+
+function limpiarXML() {
+  xmlPartidasActuales = [];
+  xmlEnsambles        = [];
+  _xmlFilesCache      = null;
+  const cont = document.getElementById('xml-partidas-container');
+  const sob  = document.getElementById('xml-sobrantes-zone');
+  const inp  = document.getElementById('xml-file-input');
+  if (cont) cont.style.display = 'none';
+  if (sob)  sob.style.display  = 'none';
+  if (inp)  inp.value          = '';
+}
+
+// ─── MODO MANUAL ─────────────────────────────────────────────────
+let partidasManuales = [];
+
+function agregarPartidaManual(datos) {
+  const id = Date.now() + Math.random();
+  partidasManuales.push(datos || { id, desc:'', tipo:'Equipo', tipoEquipo:'Laptop', marca:'', modelo:'', prefijo:'', qty:1, vu:0 });
+  renderPartidasManuales();
+}
+
+function renderPartidasManuales() {
+  const list = document.getElementById('m-partidas-list');
+  if (!partidasManuales.length) {
+    list.innerHTML = `<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">Haz clic en "+ Agregar partida" para comenzar</div>`;
+    return;
+  }
+  list.innerHTML = partidasManuales.map((p, i) => {
+    const esEquipo = p.tipo === 'Equipo';
+    return `<div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+        <span style="font-size:11px;color:var(--text3);font-weight:500">Partida ${i+1}</span>
+        <button onclick="eliminarPartidaManual(${i})" style="margin-left:auto;background:none;border:none;color:var(--text3);cursor:pointer;font-size:13px;padding:2px 4px;border-radius:4px" onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--text3)'">✕</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr auto;gap:6px;margin-bottom:8px">
+        <div>
+          <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Descripción *</div>
+          <input type="text" value="${p.desc||''}" placeholder="Ej. Laptop Dell Latitude 5520"
+            onchange="partidasManuales[${i}].desc=this.value"
+            style="background:var(--bg2);border:1px solid var(--border2);border-radius:4px;padding:5px 8px;color:var(--text);font-size:12px;font-family:var(--font);width:100%;outline:none">
+        </div>
+        <div>
+          <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Tipo</div>
+          <select onchange="partidasManuales[${i}].tipo=this.value;renderPartidasManuales()"
+            style="background:var(--bg2);border:1px solid var(--border2);border-radius:4px;padding:5px 8px;color:var(--text);font-size:12px;font-family:var(--font);outline:none">
+            ${['Equipo','Consumible','Licencia','Accesorio'].map(t=>`<option value="${t}" ${p.tipo===t?'selected':''}>${t}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:${esEquipo?'1fr 1fr 1fr 80px 80px 80px':'1fr 80px 80px'};gap:6px">
+        ${esEquipo ? `
+        <div>
+          <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Tipo equipo</div>
+          <select onchange="partidasManuales[${i}].tipoEquipo=this.value"
+            style="background:var(--bg2);border:1px solid var(--border2);border-radius:4px;padding:5px 6px;color:var(--text);font-size:12px;font-family:var(--font);width:100%;outline:none">
+            ${['Laptop','Computadora','Celular','Tablet','Monitor','Impresora','Otro'].map(t=>`<option value="${t}" ${p.tipoEquipo===t?'selected':''}>${t}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Marca</div>
+          <input value="${p.marca||''}" placeholder="Dell…" onchange="partidasManuales[${i}].marca=this.value"
+            style="background:var(--bg2);border:1px solid var(--border2);border-radius:4px;padding:5px 6px;color:var(--text);font-size:12px;font-family:var(--font);width:100%;outline:none">
+        </div>
+        <div>
+          <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Modelo</div>
+          <input value="${p.modelo||''}" placeholder="Latitude…" onchange="partidasManuales[${i}].modelo=this.value"
+            style="background:var(--bg2);border:1px solid var(--border2);border-radius:4px;padding:5px 6px;color:var(--text);font-size:12px;font-family:var(--font);width:100%;outline:none">
+        </div>
+        <div>
+          <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Prefijo</div>
+          <input value="${p.prefijo||''}" placeholder="LAP" onchange="partidasManuales[${i}].prefijo=this.value"
+            style="background:var(--bg2);border:1px solid var(--border2);border-radius:4px;padding:5px 6px;color:var(--text);font-size:12px;font-family:var(--font);width:100%;outline:none">
+        </div>` : ''}
+        <div>
+          <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Cantidad</div>
+          <input type="number" value="${p.qty||1}" min="1" onchange="partidasManuales[${i}].qty=parseFloat(this.value)||1"
+            style="background:var(--bg2);border:1px solid var(--border2);border-radius:4px;padding:5px 6px;color:var(--text);font-size:12px;font-family:var(--font);width:100%;outline:none">
+        </div>
+        <div>
+          <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Precio unit.</div>
+          <input type="number" value="${p.vu||''}" placeholder="0.00" step="0.01" onchange="partidasManuales[${i}].vu=parseFloat(this.value)||0"
+            style="background:var(--bg2);border:1px solid var(--border2);border-radius:4px;padding:5px 6px;color:var(--text);font-size:12px;font-family:var(--font);width:100%;outline:none">
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function eliminarPartidaManual(i) {
+  partidasManuales.splice(i, 1);
+  renderPartidasManuales();
+}
+
+function guardarPartidasManuales() {
+  const factura = document.getElementById('m-factura').value.trim();
+  const fecha   = document.getElementById('m-fecha').value;
+  if (!fecha) { toast('Selecciona la fecha de la factura', '⚠️'); return; }
+  if (!partidasManuales.length) { toast('Agrega al menos una partida', '⚠️'); return; }
+  const incompletas = partidasManuales.filter(p => !p.desc);
+  if (incompletas.length) { toast('Completa la descripción de todas las partidas', '⚠️'); return; }
+
+  const proveedor = document.getElementById('m-proveedor').value.trim();
+  const rfc       = document.getElementById('m-rfc').value.trim();
+
+  partidasManuales.forEach(p => {
+    const esEquipo = p.tipo === 'Equipo';
+    DB.compras.push({
+      id: Date.now() + Math.random(),
+      concepto:   p.desc,
+      tipo:       p.tipo,
+      tipoEquipo: esEquipo ? (p.tipoEquipo || 'Otro') : '',
+      marca:      p.marca || '',
+      modelo:     p.modelo || '',
+      prefijo:    esEquipo ? (p.prefijo || 'TI') : '',
+      proveedor, rfc,
+      cantidad:   p.qty,
+      costo:      p.vu,
+      total:      p.qty * p.vu,
+      fecha, factura,
+      notas: '',
+      origen: 'manual'
+    });
+  });
+  guardarDB();
+  closeModal('modal-compra');
+  renderCompras();
+  actualizarBadges();
+  toast(`${partidasManuales.length} partida${partidasManuales.length>1?'s':''} guardada${partidasManuales.length>1?'s':''}`);
+  partidasManuales = [];
+}
+
+// ─── ALMACÉN ──────────────────────────────────────────────────────
+// Item almacén: { id, desc, tipo, marca, costo, stockTotal, stockUsado, factura, fecha, compraId }
+
+function alm_stockDisp(item) {
+  return Math.max(0, (item.stockTotal||0) - (item.stockUsado||0));
+}
+
+function alm_consumir(itemId, cantidad) {
+  const item = DB.almacen.find(a => a.id == itemId);
+  if (!item) return false;
+  if (alm_stockDisp(item) < cantidad) return false;
+  item.stockUsado = (item.stockUsado||0) + cantidad;
+  return true;
+}
+
+function alm_devolver(itemId, cantidad) {
+  const item = DB.almacen.find(a => a.id == itemId);
+  if (!item) return;
+  item.stockUsado = Math.max(0, (item.stockUsado||0) - cantidad);
+}
+
+function alm_ingresarDesdeXML(partida) {
+  // Llamado al guardar XML — agrega o incrementa stock en almacén
+  const existente = DB.almacen.find(a =>
+    a.desc.toLowerCase() === partida.desc.toLowerCase() &&
+    a.factura === partida.factura
+  );
+  if (existente) {
+    existente.stockTotal = (existente.stockTotal||0) + partida.qty;
+  } else {
+    DB.almacen.push({
+      id:         Date.now() + Math.random(),
+      desc:       partida.desc,
+      tipo:       partida.tipo === 'Componente' ? 'Componente' : (partida.tipo === 'Equipo' ? 'Equipo' : 'Consumible'),
+      marca:      partida.marca || '',
+      costo:      partida.vu || 0,
+      stockTotal: partida.qty,
+      stockUsado: 0,
+      factura:    partida.factura || '',
+      fecha:      partida.fecha || '',
+      compraId:   null
+    });
+  }
+}
+
+function alm_guardarEntrada() {
+  const desc = document.getElementById('alm-desc').value.trim();
+  const qty  = parseInt(document.getElementById('alm-qty').value) || 1;
+  if (!desc) { toast('Escribe la descripción', '⚠️'); return; }
+  DB.almacen.push({
+    id:         Date.now(),
+    desc,
+    tipo:       document.getElementById('alm-tipo-sel').value,
+    marca:      document.getElementById('alm-marca').value.trim(),
+    costo:      parseFloat(document.getElementById('alm-costo').value) || 0,
+    stockTotal: qty,
+    stockUsado: 0,
+    factura:    document.getElementById('alm-factura').value.trim(),
+    fecha:      document.getElementById('alm-fecha').value,
+    compraId:   null
+  });
+  guardarDB();
+  closeModal('modal-ajuste-almacen');
+  renderAlmacen();
+  actualizarBadges();
+  toast(qty + ' unidad' + (qty>1?'es':'') + ' de "' + desc + '" agregadas al almacén');
+}
+
+function renderAlmacen() {
+  const q    = (document.getElementById('search-almacen')?.value||'').toLowerCase();
+  const ftipo= document.getElementById('filter-alm-tipo')?.value||'';
+  const rows = (DB.almacen||[]).filter(a=>
+    (a.desc.toLowerCase().includes(q)||(a.marca||'').toLowerCase().includes(q)) &&
+    (!ftipo || a.tipo===ftipo)
+  );
+  const disp = (DB.almacen||[]).reduce((s,a)=>s+alm_stockDisp(a),0);
+  const cero = (DB.almacen||[]).filter(a=>alm_stockDisp(a)===0).length;
+  document.getElementById('alm-stat-items').textContent = (DB.almacen||[]).length;
+  document.getElementById('alm-stat-disp').textContent  = disp;
+  document.getElementById('alm-stat-cero').textContent  = cero;
+  document.getElementById('alm-count-label').textContent= rows.length + ' items';
+
+  const tbody = document.getElementById('almacen-tbody');
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="10"><div class="empty-state"><div class="empty-icon">📦</div><div class="empty-title">Almacén vacío</div><div class="empty-sub">Carga un XML para que las piezas entren aquí</div></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map((a,i)=>{
+    const disp = alm_stockDisp(a);
+    const pct  = a.stockTotal > 0 ? disp/a.stockTotal : 0;
+    const col  = pct===0 ? 'var(--red)' : pct<0.3 ? 'var(--amber)' : 'var(--green)';
+    return `<tr>
+      <td class="mono">${i+1}</td>
+      <td><strong>${a.desc}</strong></td>
+      <td><span class="badge badge-gray">${a.tipo}</span></td>
+      <td class="text-sm">${a.marca||'—'}</td>
+      <td class="text-sm">${a.factura||'—'}<br><span class="text-muted">${formatFecha(a.fecha)}</span></td>
+      <td class="mono">${formatMoney(a.costo)}</td>
+      <td class="mono">${a.stockTotal}</td>
+      <td class="mono" style="color:var(--text3)">${a.stockUsado||0}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="width:40px;height:4px;background:var(--bg3);border-radius:2px;overflow:hidden">
+            <div style="width:${Math.round(pct*100)}%;height:100%;background:${col};border-radius:2px"></div>
+          </div>
+          <span class="mono" style="font-weight:600;color:${col}">${disp}</span>
+        </div>
+      </td>
+      <td><div class="row-actions">
+        <button class="icon-btn del" onclick="alm_eliminar(${a.id})">🗑</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+function alm_eliminar(id) {
+  const a = DB.almacen.find(x=>x.id===id);
+  if (!a) return;
+  if ((a.stockUsado||0) > 0) {
+    if (!confirm(`"${a.desc}" tiene ${a.stockUsado} unidades usadas en PCs ensambladas. ¿Eliminar de todas formas?`)) return;
+  } else {
+    if (!confirm(`¿Eliminar "${a.desc}" del almacén?`)) return;
+  }
+  DB.almacen = DB.almacen.filter(x=>x.id!==id);
+  guardarDB();
+  renderAlmacen();
+  actualizarBadges();
+  toast('Item eliminado del almacén', '🗑');
+}
+
+// ─── ARMAR PC ─────────────────────────────────────────────────────
+// Una PC armada vive en DB.compras con origen:'armado' y referencia a los items consumidos
+
+let arm_lineas = [];  // [{ almacenId, qtyPorPC }]
+
+function arm_agregarLinea() {
+  arm_lineas.push({ almacenId: null, qtyPorPC: 1 });
+  arm_renderLineas();
+}
+
+function arm_renderLineas() {
+  const list = document.getElementById('arm-lineas');
+  const disponibles = (DB.almacen||[]).filter(a => alm_stockDisp(a) > 0);
+  const cantPCs = parseInt(document.getElementById('arm-cantidad')?.value)||1;
+
+  if (!arm_lineas.length) {
+    list.innerHTML = `<div style="text-align:center;padding:16px;font-size:13px;color:var(--text3)">Agrega las piezas que usarás</div>`;
+    arm_recalcular(); return;
+  }
+  list.innerHTML = arm_lineas.map((ln,i) => {
+    const item     = ln.almacenId ? DB.almacen.find(a => a.id == ln.almacenId) : null;
+    const dispItem = item ? alm_stockDisp(item) : 0;
+    const necesita = (ln.qtyPorPC||1) * cantPCs;
+    const sinStock = item && necesita > dispItem;
+    const costoLinea = item ? formatMoney((ln.qtyPorPC||1) * item.costo) : '—';
+    return `<div style="display:grid;grid-template-columns:1fr 80px 80px auto;gap:6px;align-items:end;background:${sinStock?'rgba(239,68,68,0.05)':'var(--bg3)'};border:1px solid ${sinStock?'rgba(239,68,68,0.3)':'var(--border)'};border-radius:6px;padding:8px 10px">
+      <div>
+        <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Pieza del almacén</div>
+        <select id="alm-sel-${i}"
+          style="background:var(--bg2);border:1px solid var(--border2);border-radius:4px;padding:5px 8px;color:var(--text);font-size:12px;font-family:var(--font);width:100%">
+          <option value="">— Seleccionar pieza —</option>
+          ${disponibles.map(a=>`<option value="${a.id}" ${ln.almacenId==a.id?'selected':''}>${a.desc}${a.marca?' ('+a.marca+')':''} · ${alm_stockDisp(a)} disp.</option>`).join('')}
+        </select>
+      </div>
+      <div>
+        <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Cant./PC</div>
+        <input type="number" id="qty-sel-${i}" value="${ln.qtyPorPC||1}" min="1"
+          style="background:var(--bg2);border:1px solid var(--border2);border-radius:4px;padding:5px 6px;color:var(--text);font-size:12px;font-family:var(--font);width:100%;outline:none;text-align:right">
+      </div>
+      <div>
+        <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Subtotal</div>
+        <div style="padding:5px 6px;font-size:12px;font-family:var(--mono);color:var(--teal);text-align:right">${costoLinea}</div>
+      </div>
+      <button onclick="arm_lineas.splice(${i},1);arm_renderLineas()"
+        style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:4px 6px;border-radius:4px;align-self:end;margin-bottom:1px"
+        onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--text3)'">✕</button>
+    </div>`;
+  }).join('');
+
+  // Conectar eventos DESPUÉS de renderizar (evita perder el DOM)
+  arm_lineas.forEach((ln, i) => {
+    const selEl = document.getElementById(`alm-sel-${i}`);
+    const qtyEl = document.getElementById(`qty-sel-${i}`);
+    if (selEl) selEl.addEventListener('change', () => {
+      arm_lineas[i].almacenId = selEl.value ? parseFloat(selEl.value) : null;
+      arm_renderLineas();
+    });
+    if (qtyEl) qtyEl.addEventListener('input', () => {
+      arm_lineas[i].qtyPorPC = parseInt(qtyEl.value) || 1;
+      arm_recalcular();
+    });
+  });
+
+  arm_recalcular();
+}
+
+function arm_recalcular() {
+  const cantPCs = parseInt(document.getElementById('arm-cantidad')?.value)||1;
+  let costoUnit = 0;
+  let alertas   = [];
+  arm_lineas.forEach(ln => {
+    if (!ln.almacenId) return;
+    const item = DB.almacen.find(a => a.id == ln.almacenId);
+    if (!item) return;
+    costoUnit += (ln.qtyPorPC||1) * (item.costo||0);
+    const necesita = (ln.qtyPorPC||1) * cantPCs;
+    const disp = alm_stockDisp(item);
+    if (necesita > disp) {
+      alertas.push(`"${item.desc}": necesitas ${necesita} pero solo hay ${disp}`);
+    }
+  });
+  const lbl = document.getElementById('arm-costo-unit');
+  const tot = document.getElementById('arm-total-label');
+  if (lbl) lbl.textContent = formatMoney(costoUnit);
+  if (tot) tot.textContent = formatMoney(costoUnit * cantPCs);
+
+  const aZone = document.getElementById('arm-alerta-stock');
+  if (aZone) {
+    if (alertas.length) {
+      aZone.style.display = '';
+      aZone.innerHTML = `<div class="alert alert-warning" style="margin-bottom:12px">
+        <span>⚠️</span>
+        <div><strong>Stock insuficiente:</strong><br>${alertas.map(a=>'• '+a).join('<br>')}</div>
+      </div>`;
+    } else {
+      aZone.style.display = 'none';
+    }
+  }
+}
+
+function arm_guardar() {
+  const nombre   = document.getElementById('arm-nombre').value.trim();
+  const cantPCs  = parseInt(document.getElementById('arm-cantidad').value)||1;
+  const prefijo  = document.getElementById('arm-prefijo').value.trim() || 'PC-ARM';
+  const tipo     = document.getElementById('arm-tipo').value;
+
+  if (!nombre) { toast('Escribe el nombre del equipo', '⚠️'); return; }
+  if (!arm_lineas.length || arm_lineas.every(l=>!l.almacenId)) {
+    toast('Selecciona al menos una pieza del almacén', '⚠️'); return;
+  }
+
+  // Verificar stock suficiente
+  const sinStock = arm_lineas.filter(ln=>{
+    if (!ln.almacenId) return false;
+    const item = DB.almacen.find(a=>a.id===ln.almacenId);
+    return !item || (ln.qtyPorPC||1)*cantPCs > alm_stockDisp(item);
+  });
+  if (sinStock.length) { toast('Hay piezas sin stock suficiente', '⚠️'); return; }
+
+  // Consumir del almacén
+  arm_lineas.forEach(ln=>{
+    if (!ln.almacenId) return;
+    alm_consumir(ln.almacenId, (ln.qtyPorPC||1)*cantPCs);
+  });
+
+  // Calcular costo
+  let costoUnit = 0;
+  const compsMeta = arm_lineas.filter(l=>l.almacenId).map(ln=>{
+    const item = DB.almacen.find(a=>a.id===ln.almacenId);
+    costoUnit += (ln.qtyPorPC||1) * (item?.costo||0);
+    return { desc: item?.desc||'', qty: ln.qtyPorPC||1, costo: item?.costo||0, almacenId: ln.almacenId };
+  });
+
+  const notas = compsMeta.map(c=>`• ${c.qty>1?c.qty+'× ':''}${c.desc} (${formatMoney(c.costo)})`).join('\n');
+
+  DB.compras.push({
+    id:          Date.now(),
+    concepto:    nombre,
+    tipo:        'Equipo',
+    tipoEquipo:  tipo,
+    marca:       'Ensamble',
+    modelo:      '',
+    prefijo,
+    proveedor:   '',
+    cantidad:    cantPCs,
+    costo:       costoUnit,
+    total:       costoUnit * cantPCs,
+    fecha:       new Date().toISOString().split('T')[0],
+    factura:     '',
+    notas,
+    origen:      'armado',
+    componentes: compsMeta
+  });
+
+  guardarDB();
+  closeModal('modal-armar');
+  renderCompras();
+  renderAlmacen();
+  renderArmarVista();
+  actualizarBadges();
+
+  toast(`${cantPCs} PC${cantPCs>1?'s':''} armada${cantPCs>1?'s':''} ✓`);
+  mostrarResumenEnsamble(nombre, cantPCs, costoUnit, prefijo, tipo);
+
+  arm_lineas = [];
+}
+
+function renderArmarVista() {
+  const tbody = document.getElementById('armar-tbody');
+  if (!tbody) return;
+  const pcs = (DB.compras||[]).filter(c=>c.origen==='armado');
+  if (!pcs.length) {
+    tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><div class="empty-icon">🔧</div><div class="empty-title">Sin PCs armadas todavía</div><div class="empty-sub">Carga el almacén con componentes y luego arma aquí tus PCs</div></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = pcs.map((c,i)=>{
+    const disp = stockDisponible(c.id);
+    return `<tr>
+      <td class="mono">${i+1}</td>
+      <td><strong>${c.concepto}</strong></td>
+      <td><span class="badge badge-gray">${c.tipoEquipo||c.tipo}</span></td>
+      <td style="max-width:220px">
+        <div style="display:flex;flex-wrap:wrap;gap:3px">
+          ${(c.componentes||[]).map(p=>`<span style="font-size:10px;padding:1px 6px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text2)">${p.qty>1?p.qty+'× ':''}${p.desc}</span>`).join('')}
+        </div>
+      </td>
+      <td class="mono">${formatMoney(c.costo)}</td>
+      <td class="mono">${c.cantidad}</td>
+      <td><span class="badge ${disp>0?'badge-teal':'badge-red'}">${disp} disp.</span></td>
+      <td class="text-sm">${formatFecha(c.fecha)}</td>
+      <td><div class="row-actions">
+        <button class="icon-btn del" onclick="arm_eliminarPC(${c.id})">🗑</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+function arm_eliminarPC(id) {
+  const c = DB.compras.find(x=>x.id===id);
+  if (!c || !confirm(`¿Eliminar "${c.concepto}"? Los componentes regresarán al almacén.`)) return;
+  // Devolver componentes al almacén
+  (c.componentes||[]).forEach(comp=>{
+    if (comp.almacenId) alm_devolver(comp.almacenId, comp.qty * c.cantidad);
+  });
+  DB.compras = DB.compras.filter(x=>x.id!==id);
+  guardarDB();
+  renderArmarVista();
+  renderAlmacen();
+  actualizarBadges();
+  toast('PC eliminada, componentes regresaron al almacén', '↩');
+}
+
+// ─── HELPERS DE ENSAMBLE (compatibilidad) ─────────────────────────
+function guardarEnsamble() {}
+function agregarComponente(d) {}
+function renderComponentes()  {}
+function recalcularEnsamble() {}
+function actualizarNombresPreview() {}
+function mostrarPreviewEnsamble() {}
+function ens_renderPlantillasModal() {}
+function ens_volverPaso1() {}
+function ens_cambiarCant(d) {}
+function abrirNuevaPlantilla() { openModal('modal-armar'); }
+function renderPlantillasVista() {}
+
+// ─── RESUMEN VISUAL POST-ARMAR ────────────────────────────────────
+function mostrarResumenEnsamble(nombre, cantidad, costoUnit, prefijo, tipo) {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:10000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)';
+  const equiposHTML = Array.from({length:cantidad},(_,i)=>{
+    const folio = prefijo+'-'+String(i+1).padStart(3,'0');
+    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg3);border:1px solid rgba(45,212,191,0.2);border-radius:8px">
+      <span style="font-size:20px">🖥</span>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:500">${nombre}${cantidad>1?' #'+(i+1):''}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">${tipo} · ${formatMoney(costoUnit)}</div>
+      </div>
+      <span style="font-family:var(--mono);font-size:12px;color:var(--teal);background:rgba(45,212,191,0.1);border:1px solid rgba(45,212,191,0.2);border-radius:4px;padding:3px 8px">${folio}</span>
+    </div>`;
+  }).join('');
+  overlay.innerHTML = `
+    <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;width:480px;max-width:95vw;max-height:85vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,0.5)">
+      <div style="padding:20px 24px 14px;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="width:36px;height:36px;background:rgba(45,212,191,0.15);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px">✅</div>
+          <div>
+            <div style="font-size:15px;font-weight:600">${cantidad} PC${cantidad>1?'s':''} armada${cantidad>1?'s':''}</div>
+            <div style="font-size:12px;color:var(--text3);margin-top:2px">Disponibles para resguardo · Total: ${formatMoney(costoUnit*cantidad)}</div>
+          </div>
+        </div>
+      </div>
+      <div style="padding:16px 24px;overflow-y:auto;display:flex;flex-direction:column;gap:6px">${equiposHTML}</div>
+      <div style="padding:14px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px">
+        <button onclick="this.closest('[style*=fixed]').remove()"
+          style="background:var(--bg3);border:1px solid var(--border2);color:var(--text2);border-radius:6px;padding:8px 18px;font-size:13px;font-family:var(--font);cursor:pointer">
+          Cerrar
+        </button>
+        <button onclick="this.closest('[style*=fixed]').remove();switchView('resguardos');openModal('modal-resguardo')"
+          style="background:var(--accent);border:none;color:white;border-radius:6px;padding:8px 18px;font-size:13px;font-weight:500;font-family:var(--font);cursor:pointer">
+          Asignar ahora →
+        </button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
+}
+
+// ─── HELPERS DE COMPRAS ───────────────────────────────────────────
+function toggleCamposEquipo() {} // ya no se usa, queda por compatibilidad
+
+function stockDisponible(compraId) {
+  const compra = DB.compras.find(c => c.id == compraId);
+  if (!compra || compra.tipo !== 'Equipo') return 0;
+  const usados = DB.resguardos.filter(r => r.compraId == compraId).length;
+  return Math.max(0, (compra.cantidad || 0) - usados);
+}
+
+function siguienteInventario(compra) {
+  if (!compra) return '';
+  const prefijo = compra.prefijo || 'TI';
+  const usados = DB.resguardos.filter(r => r.compraId == compra.id).length;
+  return prefijo + '-' + String(usados + 1).padStart(3, '0');
+}
+
+function guardarCompra() { guardarPartidasManuales(); } // alias legacy
+
+function renderCompras() {
+  const q = (document.getElementById('search-compras')?.value || '').toLowerCase();
+  const filtroTipo = document.getElementById('filter-tipo-comp')?.value || '';
+  let rows = DB.compras.filter(c =>
+    (c.concepto.toLowerCase().includes(q) || (c.proveedor||'').toLowerCase().includes(q) ||
+     (c.marca||'').toLowerCase().includes(q) || (c.modelo||'').toLowerCase().includes(q)) &&
+    (!filtroTipo || c.tipo === filtroTipo)
+  );
+  const tbody = document.getElementById('compras-tbody');
+  document.getElementById('comp-count-label').textContent = rows.length + ' registros';
+
+  const total = DB.compras.reduce((s, c) => s + (c.total || 0), 0);
+  const cons  = DB.compras.filter(c => c.tipo === 'Consumible').length;
+  document.getElementById('comp-stat-total').textContent = DB.compras.length;
+  document.getElementById('comp-stat-monto').textContent = formatMoney(total);
+  document.getElementById('comp-stat-cons').textContent  = cons;
+
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="11"><div class="empty-state"><div class="empty-icon">🛒</div><div class="empty-title">Sin compras registradas</div><div class="empty-sub">Registra la primera compra o importa desde XML / Excel</div></div></td></tr>`;
+    return;
+  }
+  rows = [...rows].sort((a, b) => (b.fecha || '') > (a.fecha || '') ? 1 : -1);
+  tbody.innerHTML = rows.map((c, i) => {
+    const stock = c.tipo === 'Equipo' ? stockDisponible(c.id) : null;
+    const stockBadge = stock !== null
+      ? `<span class="badge ${stock > 0 ? 'badge-teal' : 'badge-red'}">${stock > 0 ? stock + ' disp.' : 'Sin stock'}</span>`
+      : '<span class="text-muted">—</span>';
+    const origenIcon = { xml:'📄', manual:'✏️', ensamble:'🔧' }[c.origen] || '';
+    return `<tr>
+      <td class="mono">${i+1}</td>
+      <td class="text-sm">${formatFecha(c.fecha)}</td>
+      <td><div style="display:flex;align-items:center;gap:6px">
+        ${origenIcon ? `<span title="${c.origen}" style="font-size:13px">${origenIcon}</span>` : ''}
+        <div><strong>${c.concepto}</strong>${c.marca||c.modelo ? '<br><span class="text-sm" style="color:var(--text3)">'+[c.marca,c.modelo].filter(Boolean).join(' ')+'</span>' : ''}${c.notas&&c.origen!=='ensamble' ? '<br><span class="text-sm">'+c.notas+'</span>' : ''}${c.origen==='ensamble'&&c.componentes ? '<br><span class="text-sm" style="color:var(--purple)">'+c.componentes.length+' componentes</span>' : ''}</div>
+      </div></td>
+      <td class="text-sm">${c.proveedor||'—'}</td>
+      <td>${badgeTipoComp(c.tipo)}${c.tipoEquipo ? '<br><span class="text-sm">'+c.tipoEquipo+'</span>' : ''}</td>
+      <td class="mono">${c.cantidad}</td>
+      <td class="mono">${formatMoney(c.costo)}</td>
+      <td class="mono" style="font-weight:500">${formatMoney(c.total)}</td>
+      <td>${stockBadge}</td>
+      <td>${c.factura ? '<span class="tag">'+c.factura+'</span>' : '<span class="text-muted">—</span>'}</td>
+      <td><div class="row-actions">
+        <button class="icon-btn del" onclick="eliminar('compras',${c.id},'renderCompras')">🗑</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+// ─── CATÁLOGOS DINÁMICOS ──────────────────────────────────────────
+
+const CAT_META = {
+  tiposEquipo:  { label:'Tipos de equipo',        color:'rgba(79,142,247,0.12)',  border:'rgba(79,142,247,0.3)',  text:'#7eb3fa',      icono:'🖥' },
+  marcas:       { label:'Marcas',                 color:'rgba(45,212,191,0.10)',  border:'rgba(45,212,191,0.25)', text:'var(--teal)',   icono:'🏷' },
+  tiposCompra:  { label:'Tipos de compra',        color:'rgba(245,158,11,0.10)',  border:'rgba(245,158,11,0.25)',text:'var(--amber)',  icono:'🛒' },
+  estadosRes:   { label:'Estados de resguardo',   color:'rgba(34,197,94,0.10)',   border:'rgba(34,197,94,0.25)',  text:'var(--green)',  icono:'🔖' },
+  areas:        { label:'Áreas / Departamentos',  color:'rgba(167,139,250,0.10)', border:'rgba(167,139,250,0.25)',text:'var(--purple)', icono:'🏢' },
+  empresas:     { label:'Empresas',               color:'rgba(249,115,22,0.10)',  border:'rgba(249,115,22,0.28)', text:'#fb923c',       icono:'🏛' },
+  centrosCosto: { label:'Centros de costo',       color:'rgba(236,72,153,0.10)',  border:'rgba(236,72,153,0.28)', text:'#f472b6',       icono:'💲' },
+};
+
+// ── Render vista catálogos ────────────────────────────────────
+function renderCatalogos() {
+  Object.keys(CAT_META).forEach(key => renderCatLista(key));
+}
+
+function renderCatLista(key) {
+  const el = document.getElementById('cat-' + key + '-list');
+  if (!el) return;
+  const items = DB.catalogos[key] || [];
+  const m     = CAT_META[key];
+  const esAreas = key === 'areas';
+
+  if (!items.length) {
+    el.innerHTML = `<div style="font-size:12px;color:var(--text3);padding:8px 4px">Sin elementos. Agrega el primero.</div>`;
+    return;
+  }
+
+  if (esAreas) {
+    // Las áreas se muestran como chips en fila
+    el.innerHTML = items.map((item, i) => `
+      <div style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;background:${m.color};border:1px solid ${m.border};border-radius:20px">
+        <span style="font-size:12px;color:${m.text}">${item}</span>
+        <button onclick="catEditar('${key}',${i})" style="background:none;border:none;cursor:pointer;color:${m.text};font-size:11px;padding:0 1px;opacity:.7" title="Editar">✏</button>
+        <button onclick="catEliminar('${key}',${i})" style="background:none;border:none;cursor:pointer;color:${m.text};font-size:11px;padding:0 1px;opacity:.7" title="Eliminar">✕</button>
+      </div>`).join('');
+  } else {
+    el.innerHTML = items.map((item, i) => `
+      <div id="cat-row-${key}-${i}" style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;transition:background .15s"
+        onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='var(--bg2)'">
+        <span style="font-size:13px;padding:2px 8px;border-radius:10px;background:${m.color};border:1px solid ${m.border};color:${m.text};flex:1">${item}</span>
+        <div style="display:flex;gap:4px;flex-shrink:0">
+          <button onclick="catMover('${key}',${i},-1)" title="Subir"
+            style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:13px;padding:3px 5px;border-radius:4px;transition:all .15s"
+            onmouseover="this.style.background='var(--bg3)';this.style.color='var(--text)'"
+            onmouseout="this.style.background='none';this.style.color='var(--text3)'"
+            ${i===0?'disabled style="opacity:.25;cursor:default"':''}>↑</button>
+          <button onclick="catMover('${key}',${i},1)" title="Bajar"
+            style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:13px;padding:3px 5px;border-radius:4px;transition:all .15s"
+            onmouseover="this.style.background='var(--bg3)';this.style.color='var(--text)'"
+            onmouseout="this.style.background='none';this.style.color='var(--text3)'"
+            ${i===items.length-1?'disabled style="opacity:.25;cursor:default"':''}>↓</button>
+          <button onclick="catEditar('${key}',${i})" title="Editar"
+            style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:13px;padding:3px 5px;border-radius:4px;transition:all .15s"
+            onmouseover="this.style.background='rgba(79,142,247,0.1)';this.style.color='var(--accent)'"
+            onmouseout="this.style.background='none';this.style.color='var(--text3)'">✏</button>
+          <button onclick="catEliminar('${key}',${i})" title="Eliminar"
+            style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:13px;padding:3px 5px;border-radius:4px;transition:all .15s"
+            onmouseover="this.style.background='rgba(239,68,68,0.1)';this.style.color='var(--red)'"
+            onmouseout="this.style.background='none';this.style.color='var(--text3)'">🗑</button>
+        </div>
+      </div>`).join('');
+  }
+}
+
+// ── CRUD de catálogos ─────────────────────────────────────────
+function catAgregar(key) {
+  const m    = CAT_META[key];
+  const popup = crearCatPopup(m.label, '', (valor) => {
+    if (!valor) return;
+    if (DB.catalogos[key].some(v => v.toLowerCase() === valor.toLowerCase())) {
+      toast('Ya existe "' + valor + '" en este catálogo', '⚠️'); return;
+    }
+    DB.catalogos[key].push(valor);
+    guardarDB();
+    renderCatLista(key);
+    poblarSelectsCatalogos();
+    toast(valor + ' agregado a ' + m.label);
+    popup.remove();
+  });
+}
+
+function catEditar(key, i) {
+  const m     = CAT_META[key];
+  const valor = DB.catalogos[key][i];
+  const popup = crearCatPopup('Editar — ' + m.label, valor, (nuevo) => {
+    if (!nuevo) return;
+    const duplicado = DB.catalogos[key].findIndex(v => v.toLowerCase() === nuevo.toLowerCase());
+    if (duplicado !== -1 && duplicado !== i) {
+      toast('Ya existe "' + nuevo + '" en este catálogo', '⚠️'); return;
+    }
+    const viejo = DB.catalogos[key][i];
+    DB.catalogos[key][i] = nuevo;
+    // Actualizar referencias en resguardos y compras
+    if (key === 'tiposEquipo') {
+      DB.resguardos.forEach(r => { if(r.tipo === viejo) r.tipo = nuevo; });
+      DB.compras.forEach(c => { if(c.tipoEquipo === viejo) c.tipoEquipo = nuevo; });
+    }
+    if (key === 'marcas') {
+      DB.resguardos.forEach(r => { if(r.marca === viejo) r.marca = nuevo; });
+      DB.compras.forEach(c => { if(c.marca === viejo) c.marca = nuevo; });
+    }
+    if (key === 'tiposCompra') {
+      DB.compras.forEach(c => { if(c.tipo === viejo) c.tipo = nuevo; });
+    }
+    if (key === 'estadosRes') {
+      DB.resguardos.forEach(r => { if(r.estado === viejo) r.estado = nuevo; });
+    }
+    if (key === 'areas') {
+      DB.empleados.forEach(e => { if(e.area === viejo) e.area = nuevo; });
+    }
+    if (key === 'empresas') {
+      DB.resguardos.forEach(r => { if(r.empresa === viejo) r.empresa = nuevo; });
+    }
+    if (key === 'centrosCosto') {
+      DB.resguardos.forEach(r => { if(r.centroCosto === viejo) r.centroCosto = nuevo; });
+    }
+    guardarDB();
+    renderCatLista(key);
+    poblarSelectsCatalogos();
+    toast('"' + viejo + '" renombrado a "' + nuevo + '"');
+    popup.remove();
+  });
+}
+
+function catEliminar(key, i) {
+  const valor = DB.catalogos[key][i];
+  // Verificar si está en uso
+  let enUso = 0;
+  if (key === 'tiposEquipo') enUso = DB.resguardos.filter(r => r.tipo === valor).length + DB.compras.filter(c => c.tipoEquipo === valor).length;
+  if (key === 'marcas')      enUso = DB.resguardos.filter(r => r.marca === valor).length + DB.compras.filter(c => c.marca === valor).length;
+  if (key === 'tiposCompra') enUso = DB.compras.filter(c => c.tipo === valor).length;
+  if (key === 'estadosRes')  enUso = DB.resguardos.filter(r => r.estado === valor).length;
+  if (key === 'areas')       enUso = DB.empleados.filter(e => e.area === valor).length;
+  if (key === 'empresas')    enUso = DB.resguardos.filter(r => r.empresa === valor).length;
+  if (key === 'centrosCosto')enUso = DB.resguardos.filter(r => r.centroCosto === valor).length;
+
+  const msg = enUso > 0
+    ? `"${valor}" está en uso en ${enUso} registro${enUso>1?'s':''}. ¿Eliminar de todas formas?`
+    : `¿Eliminar "${valor}"?`;
+  if (!confirm(msg)) return;
+  DB.catalogos[key].splice(i, 1);
+  guardarDB();
+  renderCatLista(key);
+  poblarSelectsCatalogos();
+  toast('"' + valor + '" eliminado', '🗑');
+}
+
+function catMover(key, i, dir) {
+  const arr = DB.catalogos[key];
+  const j   = i + dir;
+  if (j < 0 || j >= arr.length) return;
+  [arr[i], arr[j]] = [arr[j], arr[i]];
+  guardarDB();
+  renderCatLista(key);
+  poblarSelectsCatalogos();
+}
+
+// ── Popup inline para agregar/editar ────────────────────────
+function crearCatPopup(titulo, valorInicial, onConfirm) {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:10000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px)';
+  overlay.innerHTML = `
+    <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:12px;width:360px;max-width:95vw;padding:20px 24px;box-shadow:0 8px 40px rgba(0,0,0,0.5)">
+      <div style="font-size:14px;font-weight:600;margin-bottom:14px">${titulo}</div>
+      <input id="cat-popup-input" type="text" value="${valorInicial}"
+        placeholder="Escribe el nombre…"
+        style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:9px 12px;color:var(--text);font-family:var(--font);font-size:13px;width:100%;outline:none;margin-bottom:14px">
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button onclick="this.closest('[style*=fixed]').remove()"
+          style="background:var(--bg3);border:1px solid var(--border2);color:var(--text2);border-radius:6px;padding:7px 16px;font-size:13px;font-family:var(--font);cursor:pointer">
+          Cancelar
+        </button>
+        <button id="cat-popup-ok"
+          style="background:var(--accent);border:none;color:white;border-radius:6px;padding:7px 16px;font-size:13px;font-weight:500;font-family:var(--font);cursor:pointer">
+          Guardar
+        </button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
+  const input = overlay.querySelector('#cat-popup-input');
+  input.focus();
+  input.select();
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') onConfirm(input.value.trim());
+    if (e.key === 'Escape') overlay.remove();
+  });
+  overlay.querySelector('#cat-popup-ok').addEventListener('click', () => onConfirm(input.value.trim()));
+  return overlay;
+}
+
+// ── Poblar todos los <select> del sistema con los catálogos ──
+function poblarSelectsCatalogos() {
+  const C = DB.catalogos;
+
+  // Helper: reemplaza opciones de un select preservando el valor actual
+  function rellenar(id, items, valorActual) {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    const val = valorActual !== undefined ? valorActual : sel.value;
+    sel.innerHTML = items.map(v => `<option value="${v}">${v}</option>`).join('');
+    if (val && items.includes(val)) sel.value = val;
+  }
+
+  function rellenarConBlanco(id, items) {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    const val = sel.value;
+    sel.innerHTML = `<option value=""></option>` + items.map(v => `<option value="${v}">${v}</option>`).join('');
+    if (val && items.includes(val)) sel.value = val;
+  }
+
+  // Tipos de equipo
+  ['res-tipo','comp-tipo-equipo','ecat-tipo','e-tipo-equipo','plt-tipo'].forEach(id => rellenar(id, C.tiposEquipo));
+
+  // Tipos de compra
+  rellenar('filter-tipo-comp', ['', ...C.tiposCompra], '');
+  rellenar('filter-tipo-res',  ['', ...C.tiposEquipo], '');
+
+  // Estados de resguardo
+  rellenar('res-estado', C.estadosRes);
+
+  // Tipos de compra en modal manual
+  rellenar('comp-tipo', C.tiposCompra);
+  rellenar('m-tipo-sel', C.tiposCompra);
+
+  // Empresas — modal y filtro
+  rellenar('res-empresa', C.empresas);
+  rellenarConBlanco('filter-empresa-res', C.empresas);
+
+  // Centros de costo — modal y filtro
+  rellenar('res-centro', C.centrosCosto);
+  rellenarConBlanco('filter-centro-res', C.centrosCosto);
+
+  // Datalist de marcas
+  let dl = document.getElementById('dl-marcas');
+  if (!dl) {
+    dl = document.createElement('datalist');
+    dl.id = 'dl-marcas';
+    document.body.appendChild(dl);
+  }
+  dl.innerHTML = C.marcas.map(m => `<option value="${m}">`).join('');
+
+  // Datalist de áreas (para empleados)
+  let dlA = document.getElementById('dl-areas');
+  if (!dlA) {
+    dlA = document.createElement('datalist');
+    dlA.id = 'dl-areas';
+    document.body.appendChild(dlA);
+  }
+  dlA.innerHTML = C.areas.map(a => `<option value="${a}">`).join('');
+}
+
+// ─── CATÁLOGO EQUIPOS ─────────────────────────────────────────────
+function guardarEquipoCat() {
+  const marca = document.getElementById('ecat-marca').value.trim();
+  const modelo = document.getElementById('ecat-modelo').value.trim();
+  if (!marca || !modelo) { toast('Marca y modelo son requeridos', '⚠️'); return; }
+  DB.equiposCat.push({
+    id: Date.now(),
+    marca, modelo,
+    tipo: document.getElementById('ecat-tipo').value,
+    precio: document.getElementById('ecat-precio').value,
+    specs: document.getElementById('ecat-specs').value.trim()
+  });
+  guardarDB();
+  closeModal('modal-equipo-cat');
+  renderEquiposCat();
+  toast('Equipo agregado al catálogo');
+}
+
+function renderEquiposCat() {
+  const tbody = document.getElementById('equipos-cat-tbody');
+  if (!DB.equiposCat.length) {
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">📦</div><div class="empty-title">Catálogo vacío</div><div class="empty-sub">Agrega modelos de equipos para referencia</div></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = DB.equiposCat.map((e, i) => `<tr>
+    <td class="mono">${i+1}</td>
+    <td><strong>${e.marca}</strong></td>
+    <td>${e.modelo}</td>
+    <td><span class="badge badge-gray">${e.tipo}</span></td>
+    <td class="text-sm">${e.specs || '—'}</td>
+    <td class="mono">${e.precio ? formatMoney(e.precio) : '—'}</td>
+    <td><div class="row-actions">
+      <button class="icon-btn del" onclick="eliminar('equiposCat',${e.id},'renderEquiposCat')">🗑</button>
+    </div></td>
+  </tr>`).join('');
+}
+
+// ─── ELIMINAR ────────────────────────────────────────────────────
+function eliminar(modulo, id, renderFn) {
+  if (!confirm('¿Eliminar este registro?')) return;
+  DB[modulo] = DB[modulo].filter(x => x.id !== id);
+  guardarDB();
+  window[renderFn]();
+  actualizarBadges();
+  toast('Registro eliminado', '🗑');
+}
+
+// ─── DASHBOARD ───────────────────────────────────────────────────
+function renderDashboard() {
+  document.getElementById('stat-resguardos').textContent = DB.resguardos.filter(r => r.estado === 'Activo').length;
+  const total = DB.compras.reduce((s, c) => s + (c.total || 0), 0);
+  document.getElementById('stat-monto').textContent = formatMoney(total);
+  document.getElementById('stat-arrendados').textContent = DB.resguardos.filter(r => r.modalidad === 'Arrendado').length;
+  document.getElementById('stat-empleados').textContent = DB.empleados.length;
+
+  // Últimos 5 resguardos
+  const tbody = document.getElementById('dash-resguardos-tbody');
+  const ult = [...DB.resguardos].slice(-5).reverse();
+  if (!ult.length) {
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><div class="empty-icon">🖥</div><div class="empty-title">Sin resguardos aún</div></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = ult.map(r => `<tr>
+    <td><strong>${r.empleado}</strong></td>
+    <td>${r.marca || ''} ${r.modelo || r.tipo}</td>
+    <td><span class="badge badge-gray">${r.tipo}</span></td>
+    <td class="text-sm">${formatFecha(r.fecha)}</td>
+    <td>${badgeEstado(r.estado)}</td>
+  </tr>`).join('');
+
+  // Alertas arrendamientos próximos
+  const alertas = document.getElementById('alertas-container');
+  alertas.innerHTML = '';
+  const hoy = new Date();
+  const prox = DB.resguardos.filter(r => {
+    if (!r.finArrendamiento) return false;
+    const fin = new Date(r.finArrendamiento);
+    const dias = Math.round((fin - hoy) / 86400000);
+    return dias >= 0 && dias <= 30;
+  });
+  if (prox.length) {
+    alertas.innerHTML = `<div class="alert alert-warning">⚠ ${prox.length} arrendamiento(s) vencen en los próximos 30 días: ${prox.map(r => r.empleado + ' — ' + r.marca + ' ' + r.modelo).join('; ')}</div>`;
+  }
+}
+
+function actualizarBadges() {
+  document.getElementById('badge-resguardos').textContent = DB.resguardos.length;
+  document.getElementById('badge-compras').textContent    = DB.compras.length;
+  const dispAlm = (DB.almacen||[]).reduce((s,a) => s + alm_stockDisp(a), 0);
+  const badgeAlm = document.getElementById('badge-almacen');
+  if (badgeAlm) badgeAlm.textContent = dispAlm;
+}
+
+// ─── IMPORTAR EXCEL ──────────────────────────────────────────────
+function leerExcel(file, callback) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    const wb = XLSX.read(e.target.result, { type: 'binary' });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const data = XLSX.utils.sheet_to_json(ws, { defval: '' });
+    callback(data);
+  };
+  reader.readAsBinaryString(file);
+}
+
+function normalizeKey(k) {
+  return k.toLowerCase().trim().replace(/\s+/g, '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+function getVal(row, ...keys) {
+  for (const k of keys) {
+    for (const rk of Object.keys(row)) {
+      if (normalizeKey(rk) === normalizeKey(k)) return String(row[rk]).trim();
+    }
+  }
+  return '';
+}
+
+function importarEmpleados(input) {
+  const file = input.files[0]; if (!file) return;
+  leerExcel(file, data => {
+    let count = 0;
+    data.forEach(row => {
+      const nombre = getVal(row, 'nombre', 'name', 'empleado');
+      if (!nombre) return;
+      if (DB.empleados.some(e => e.nombre.toLowerCase() === nombre.toLowerCase())) return;
+      DB.empleados.push({
+        id: Date.now() + Math.random(),
+        nombre,
+        area: getVal(row, 'area', 'departamento', 'depto'),
+        cargo: getVal(row, 'cargo', 'puesto', 'posicion'),
+        email: getVal(row, 'email', 'correo', 'mail')
+      });
+      count++;
+    });
+    guardarDB();
+    renderEmpleados();
+    actualizarBadges();
+    document.getElementById('preview-emp').innerHTML =
+      `<div class="alert alert-success">✅ ${count} empleados importados correctamente (${data.length - count} duplicados omitidos)</div>`;
+    toast(`${count} empleados importados`);
+  });
+}
+
+function importarCompras(input) {
+  const file = input.files[0]; if (!file) return;
+  leerExcel(file, data => {
+    let count = 0;
+    data.forEach(row => {
+      const concepto = getVal(row, 'concepto', 'descripcion', 'producto', 'articulo');
+      if (!concepto) return;
+      const cantidad = parseFloat(getVal(row, 'cantidad', 'qty')) || 1;
+      const costo = parseFloat(getVal(row, 'costo', 'precio', 'importe', 'costo unitario')) || 0;
+      DB.compras.push({
+        id: Date.now() + Math.random(),
+        concepto,
+        tipo: getVal(row, 'tipo', 'categoria') || 'Equipo',
+        proveedor: getVal(row, 'proveedor', 'vendor'),
+        cantidad, costo, total: cantidad * costo,
+        fecha: getVal(row, 'fecha', 'date'),
+        factura: getVal(row, 'factura', 'invoice', 'folio', 'orden'),
+        notas: getVal(row, 'notas', 'observaciones', 'nota')
+      });
+      count++;
+    });
+    guardarDB();
+    renderCompras();
+    actualizarBadges();
+    document.getElementById('preview-comp').innerHTML =
+      `<div class="alert alert-success">✅ ${count} compras importadas correctamente</div>`;
+    toast(`${count} compras importadas`);
+  });
+}
+
+function importarResguardos(input) {
+  const file = input.files[0]; if (!file) return;
+  leerExcel(file, data => {
+    let count = 0;
+    data.forEach(row => {
+      const empleado = getVal(row, 'empleado', 'nombre', 'usuario', 'asignado a');
+      const serie = getVal(row, 'serie', 'no serie', 'numero de serie', 'serial');
+      if (!empleado) return;
+      DB.resguardos.push({
+        id: Date.now() + Math.random(),
+        empleado,
+        tipo: getVal(row, 'tipo', 'tipo equipo') || 'Computadora',
+        modalidad: getVal(row, 'modalidad', 'propiedad') || 'Propio',
+        marca: getVal(row, 'marca', 'brand'),
+        modelo: getVal(row, 'modelo', 'model'),
+        serie: serie || '—',
+        inventario: getVal(row, 'inventario', 'no inventario', 'inv'),
+        fecha: getVal(row, 'fecha', 'fecha asignacion', 'date'),
+        finArrendamiento: getVal(row, 'fin arrendamiento', 'vencimiento'),
+        estado: getVal(row, 'estado', 'status') || 'Activo',
+        obs: getVal(row, 'obs', 'observaciones')
+      });
+      count++;
+    });
+    guardarDB();
+    renderResguardos();
+    actualizarBadges();
+    document.getElementById('preview-res').innerHTML =
+      `<div class="alert alert-success">✅ ${count} resguardos importados correctamente</div>`;
+    toast(`${count} resguardos importados`);
+  });
+}
+
+// ─── INIT CON FIREBASE AUTH ──────────────────────────────────────
+const loginScreen = document.getElementById('login-screen');
+const appBody     = document.querySelector('.sidebar');
+
+// Mostrar login inmediatamente hasta confirmar sesión
+document.querySelector('main').style.display   = 'none';
+document.querySelector('.sidebar').style.display = 'none';
+loginScreen.style.display = 'flex';
+
+auth.onAuthStateChanged(user => {
+  if (user) {
+    // Usuario autenticado → mostrar app
+    loginScreen.style.display = 'none';
+    document.querySelector('main').style.display    = '';
+    document.querySelector('.sidebar').style.display = 'flex';
+    document.getElementById('sidebar-user').textContent = user.email;
+
+    // Iniciar listeners de Firestore en tiempo real
+    iniciarListeners();
+
+    // Inicializar catálogos si es primera vez
+    db.collection('config').doc('catalogos').get().then(snap => {
+      if (!snap.exists) {
+        db.collection('config').doc('catalogos').set(DB.catalogos);
+        db.collection('config').doc('plantillas').set({ lista: [] });
+      }
+      poblarSelectsCatalogos();
+      renderDashboard();
+      actualizarBadges();
+    });
+
+  } else {
+    // No autenticado → mostrar login
+    _dbListeners.forEach(u => u());
+    _dbListeners = [];
+    document.querySelector('main').style.display    = 'none';
+    document.querySelector('.sidebar').style.display = 'none';
+    loginScreen.style.display = 'flex';
+    document.getElementById('login-btn').textContent = 'Entrar';
+    document.getElementById('login-btn').disabled = false;
+  }
+});
+</script>
+</body>
+</html>
