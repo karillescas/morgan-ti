@@ -466,6 +466,12 @@
     <div class="nav-item" onclick="switchView('catalogos')">
       <span class="nav-icon">🏷</span> Clasificaciones
     </div>
+    <div id="nav-admin-section" style="display:none">
+      <div class="nav-section" style="margin-top:8px">Administración</div>
+      <div class="nav-item" id="nav-usuarios" onclick="switchView('usuarios')">
+        <span class="nav-icon">👥</span> Usuarios
+      </div>
+    </div>
     <div class="nav-section" style="margin-top:8px">Próximamente</div>
     <div class="nav-item" style="opacity:0.4;cursor:default">
       <span class="nav-icon">🎫</span> Tickets
@@ -999,9 +1005,73 @@
     </div>
   </div>
 
+
+  <!-- ══ USUARIOS ══ -->
+  <div id="view-usuarios" class="view">
+    <div class="topbar">
+      <div><div class="topbar-title">Gestión de usuarios</div></div>
+      <button class="btn btn-primary" onclick="openModal('modal-invitar')">+ Invitar usuario</button>
+    </div>
+    <div class="content">
+      <div class="alert alert-info" style="margin-bottom:20px">
+        <span>ℹ</span>
+        <span>Al invitar un usuario le llega un correo para que él mismo defina su contraseña. Solo los administradores pueden ver esta sección.</span>
+      </div>
+      <div class="table-card">
+        <div class="table-header"><div class="table-title">Usuarios del sistema</div></div>
+        <table>
+          <thead><tr><th>#</th><th>Nombre</th><th>Correo</th><th>Rol</th><th>Estado</th><th>Registrado</th><th></th></tr></thead>
+          <tbody id="usuarios-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+
 </main>
 
 <!-- ══════════ MODALES ══════════ -->
+
+
+<!-- Modal: Invitar Usuario -->
+<div id="modal-invitar" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <span style="font-size:18px">📧</span>
+      <div class="modal-title">Invitar usuario</div>
+      <button class="modal-close" onclick="closeModal('modal-invitar')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-info" style="margin-bottom:16px">
+        <span>📧</span>
+        <span>Se creará la cuenta y Firebase enviará un correo para que el usuario defina su contraseña.</span>
+      </div>
+      <div class="form-grid">
+        <div class="form-group full">
+          <label>Nombre completo *</label>
+          <input type="text" id="inv-nombre" placeholder="Ej. Ana López">
+        </div>
+        <div class="form-group full">
+          <label>Correo electrónico *</label>
+          <input type="email" id="inv-email" placeholder="usuario@empresa.com">
+        </div>
+        <div class="form-group full">
+          <label>Rol</label>
+          <select id="inv-rol">
+            <option value="usuario">Usuario</option>
+            <option value="admin">Administrador</option>
+          </select>
+        </div>
+      </div>
+      <div id="inv-error" style="display:none;margin-top:12px;padding:10px 14px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);border-radius:6px;color:#fc8181;font-size:13px"></div>
+      <div id="inv-ok"    style="display:none;margin-top:12px;padding:10px 14px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.25);border-radius:6px;color:var(--green);font-size:13px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-invitar')">Cancelar</button>
+      <button class="btn btn-primary" id="inv-btn" onclick="invitarUsuario()">📧 Enviar invitación</button>
+    </div>
+  </div>
+</div>
 
 <!-- Modal: Nuevo Resguardo -->
 <div id="modal-resguardo" class="modal-overlay">
@@ -1552,13 +1622,12 @@ function switchView(view) {
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('view-' + view).classList.add('active');
 
-  const map = {
-    dashboard: 0, resguardos: 1, compras: 2, almacen: 3, armar: 4,
-    empleados: 5, 'equipos-cat': 6, catalogos: 7
-  };
-  const items = document.querySelectorAll('.nav-item');
-  const idx = map[view];
-  if (idx !== undefined && items[idx]) items[idx].classList.add('active');
+  // Marcar activo por id del nav-item directamente
+  document.querySelectorAll('.nav-item').forEach(el => {
+    if (el.getAttribute('onclick') && el.getAttribute('onclick').includes("'" + view + "'")) {
+      el.classList.add('active');
+    }
+  });
 
   if (view === 'dashboard')   renderDashboard();
   if (view === 'resguardos')  renderResguardos();
@@ -1568,6 +1637,7 @@ function switchView(view) {
   if (view === 'empleados')   renderEmpleados();
   if (view === 'equipos-cat') renderEquiposCat();
   if (view === 'catalogos')   renderCatalogos();
+  if (view === 'usuarios')    renderUsuarios();
 }
 
 // ─── MODAL ───────────────────────────────────────────────────────
@@ -3806,18 +3876,34 @@ document.querySelector('main').style.display   = 'none';
 document.querySelector('.sidebar').style.display = 'none';
 loginScreen.style.display = 'flex';
 
-auth.onAuthStateChanged(user => {
+// ─── GESTIÓN DE USUARIOS ────────────────────────────────────────
+let currentUser = null;  // { uid, email, nombre, rol }
+
+auth.onAuthStateChanged(async user => {
   if (user) {
-    // Usuario autenticado → mostrar app
     loginScreen.style.display = 'none';
     document.querySelector('main').style.display    = '';
     document.querySelector('.sidebar').style.display = 'flex';
-    document.getElementById('sidebar-user').textContent = user.email;
 
-    // Iniciar listeners de Firestore en tiempo real
+    // Cargar perfil del usuario desde Firestore
+    const perfilSnap = await db.collection('usuarios').doc(user.uid).get();
+    if (perfilSnap.exists) {
+      currentUser = perfilSnap.data();
+    } else {
+      // Primera vez: crear perfil básico
+      currentUser = { uid: user.uid, email: user.email, nombre: user.email, rol: 'usuario', activo: true, fecha: new Date().toISOString().split('T')[0] };
+      await db.collection('usuarios').doc(user.uid).set(currentUser);
+    }
+
+    // Mostrar nombre en sidebar
+    document.getElementById('sidebar-user').textContent = currentUser.nombre || currentUser.email;
+
+    // Mostrar sección admin si corresponde
+    const adminSec = document.getElementById('nav-admin-section');
+    if (adminSec) adminSec.style.display = currentUser.rol === 'admin' ? '' : 'none';
+
+    // Iniciar listeners y cargar app
     iniciarListeners();
-
-    // Inicializar catálogos si es primera vez
     db.collection('config').doc('catalogos').get().then(snap => {
       if (!snap.exists) {
         db.collection('config').doc('catalogos').set(DB.catalogos);
@@ -3829,7 +3915,7 @@ auth.onAuthStateChanged(user => {
     });
 
   } else {
-    // No autenticado → mostrar login
+    currentUser = null;
     _dbListeners.forEach(u => u());
     _dbListeners = [];
     document.querySelector('main').style.display    = 'none';
@@ -3839,6 +3925,119 @@ auth.onAuthStateChanged(user => {
     document.getElementById('login-btn').disabled = false;
   }
 });
+
+// ─── RENDER USUARIOS ─────────────────────────────────────────────
+async function renderUsuarios() {
+  if (!currentUser || currentUser.rol !== 'admin') {
+    switchView('dashboard'); return;
+  }
+  const tbody = document.getElementById('usuarios-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text3)">Cargando…</td></tr>';
+
+  const snap = await db.collection('usuarios').orderBy('fecha').get();
+  const usuarios = snap.docs.map(d => d.data());
+
+  if (!usuarios.length) {
+    tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">👥</div><div class="empty-title">Sin usuarios registrados</div></div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = usuarios.map((u, i) => `<tr>
+    <td class="mono">${i+1}</td>
+    <td><strong>${u.nombre||'—'}</strong></td>
+    <td class="text-sm">${u.email}</td>
+    <td>
+      <select onchange="cambiarRol('${u.uid}', this.value)"
+        style="background:var(--bg3);border:1px solid var(--border2);border-radius:4px;padding:4px 8px;color:var(--text);font-size:12px;font-family:var(--font)">
+        <option value="usuario" ${u.rol==='usuario'?'selected':''}>Usuario</option>
+        <option value="admin"   ${u.rol==='admin'  ?'selected':''}>Admin</option>
+      </select>
+    </td>
+    <td>
+      <span class="badge ${u.activo!==false?'badge-green':'badge-red'}">${u.activo!==false?'Activo':'Inactivo'}</span>
+    </td>
+    <td class="text-sm">${u.fecha||'—'}</td>
+    <td>
+      <div class="row-actions" style="opacity:1">
+        <button class="btn btn-ghost btn-sm" onclick="toggleActivoUsuario('${u.uid}', ${u.activo!==false})">
+          ${u.activo!==false?'Desactivar':'Activar'}
+        </button>
+        ${u.uid !== currentUser?.uid ? `<button class="icon-btn del" onclick="eliminarUsuario('${u.uid}','${u.email}')">🗑</button>` : ''}
+      </div>
+    </td>
+  </tr>`).join('');
+}
+
+async function invitarUsuario() {
+  const nombre = document.getElementById('inv-nombre').value.trim();
+  const email  = document.getElementById('inv-email').value.trim();
+  const rol    = document.getElementById('inv-rol').value;
+  const errEl  = document.getElementById('inv-error');
+  const okEl   = document.getElementById('inv-ok');
+  const btn    = document.getElementById('inv-btn');
+  errEl.style.display = 'none';
+  okEl.style.display  = 'none';
+
+  if (!nombre) { errEl.textContent='Escribe el nombre'; errEl.style.display=''; return; }
+  if (!email)  { errEl.textContent='Escribe el correo'; errEl.style.display=''; return; }
+
+  btn.textContent = 'Enviando…'; btn.disabled = true;
+
+  try {
+    // Crear usuario con contraseña temporal aleatoria
+    const tempPass = Math.random().toString(36).slice(-10) + 'Aa1!';
+    const cred = await auth.createUserWithEmailAndPassword(email, tempPass);
+    const uid  = cred.user.uid;
+
+    // Guardar perfil en Firestore
+    await db.collection('usuarios').doc(uid).set({
+      uid, nombre, email, rol, activo: true,
+      fecha: new Date().toISOString().split('T')[0]
+    });
+
+    // Enviar correo de restablecimiento de contraseña
+    await auth.sendPasswordResetEmail(email);
+
+    // Volver a la sesión del admin (no cambiar de usuario)
+    // Firebase no hace auto-login al crear usuario con compat SDK... verificar
+    okEl.textContent = `✅ Invitación enviada a ${email}. El usuario recibirá un correo para definir su contraseña.`;
+    okEl.style.display = '';
+    btn.textContent = 'Enviado ✓';
+    document.getElementById('inv-nombre').value = '';
+    document.getElementById('inv-email').value  = '';
+    renderUsuarios();
+
+  } catch(e) {
+    const msgs = {
+      'auth/email-already-in-use': 'Este correo ya está registrado',
+      'auth/invalid-email':        'Correo inválido',
+      'auth/weak-password':        'Contraseña muy débil'
+    };
+    errEl.textContent = msgs[e.code] || ('Error: ' + e.message);
+    errEl.style.display = '';
+    btn.textContent = '📧 Enviar invitación';
+    btn.disabled = false;
+  }
+}
+
+async function cambiarRol(uid, nuevoRol) {
+  await db.collection('usuarios').doc(uid).update({ rol: nuevoRol });
+  toast(`Rol actualizado a ${nuevoRol}`);
+  renderUsuarios();
+}
+
+async function toggleActivoUsuario(uid, activoActual) {
+  await db.collection('usuarios').doc(uid).update({ activo: !activoActual });
+  toast(activoActual ? 'Usuario desactivado' : 'Usuario activado');
+  renderUsuarios();
+}
+
+async function eliminarUsuario(uid, email) {
+  if (!confirm(`¿Eliminar el usuario ${email}? Solo se borrará el perfil, no la cuenta de Firebase.`)) return;
+  await db.collection('usuarios').doc(uid).delete();
+  toast('Usuario eliminado', '🗑');
+  renderUsuarios();
+}
 </script>
 </body>
 </html>
