@@ -1019,10 +1019,12 @@
       </div>
       <div class="table-card">
         <div class="table-header"><div class="table-title">Usuarios del sistema</div></div>
-        <table>
-          <thead><tr><th>#</th><th>Nombre</th><th>Correo</th><th>Rol</th><th>Estado</th><th>Registrado</th><th></th></tr></thead>
-          <tbody id="usuarios-tbody"></tbody>
-        </table>
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Estado</th><th>Alta</th><th></th></tr></thead>
+            <tbody id="usuarios-tbody"></tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
@@ -3942,10 +3944,9 @@ async function renderUsuarios() {
     tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">👥</div><div class="empty-title">Sin usuarios registrados</div></div></td></tr>';
     return;
   }
-  tbody.innerHTML = usuarios.map((u, i) => `<tr>
-    <td class="mono">${i+1}</td>
+  tbody.innerHTML = usuarios.map((u) => `<tr>
     <td><strong>${u.nombre||'—'}</strong></td>
-    <td class="text-sm">${u.email}</td>
+    <td class="text-sm" style="max-width:180px;overflow:hidden;text-overflow:ellipsis">${u.email}</td>
     <td>
       <select onchange="cambiarRol('${u.uid}', this.value)"
         style="background:var(--bg3);border:1px solid var(--border2);border-radius:4px;padding:4px 8px;color:var(--text);font-size:12px;font-family:var(--font)">
@@ -3953,12 +3954,10 @@ async function renderUsuarios() {
         <option value="admin"   ${u.rol==='admin'  ?'selected':''}>Admin</option>
       </select>
     </td>
-    <td>
-      <span class="badge ${u.activo!==false?'badge-green':'badge-red'}">${u.activo!==false?'Activo':'Inactivo'}</span>
-    </td>
+    <td><span class="badge ${u.activo!==false?'badge-green':'badge-red'}">${u.activo!==false?'Activo':'Inactivo'}</span></td>
     <td class="text-sm">${u.fecha||'—'}</td>
     <td>
-      <div class="row-actions" style="opacity:1">
+      <div style="display:flex;gap:5px;align-items:center">
         <button class="btn btn-ghost btn-sm" onclick="toggleActivoUsuario('${u.uid}', ${u.activo!==false})">
           ${u.activo!==false?'Desactivar':'Activar'}
         </button>
