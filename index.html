@@ -468,6 +468,13 @@
     <div class="nav-item" onclick="switchView('catalogos')">
       <span class="nav-icon">🏷</span> Clasificaciones
     </div>
+    <div class="nav-item" onclick="switchView('lineas')">
+      <span class="nav-icon">📡</span> Líneas
+      <span class="nav-badge" id="badge-lineas">0</span>
+    </div>
+    <div class="nav-item" onclick="switchView('plantillas-res')">
+      <span class="nav-icon">📋</span> Formatos resguardo
+    </div>
     <div id="nav-admin-section" style="display:none">
       <div class="nav-section" style="margin-top:8px">Administración</div>
       <div class="nav-item" id="nav-usuarios" onclick="switchView('usuarios')">
@@ -1032,6 +1039,53 @@
   </div>
 
 
+
+  <!-- ══ LÍNEAS TELEFÓNICAS ══ -->
+  <div id="view-lineas" class="view">
+    <div class="topbar">
+      <div><div class="topbar-title">Líneas telefónicas</div></div>
+      <button class="btn btn-primary" onclick="openModal('modal-linea')">+ Nueva línea</button>
+    </div>
+    <div class="content">
+      <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px">
+        <div class="stat-card teal"><div class="stat-label">Total líneas</div><div class="stat-value" id="lin-stat-total">0</div></div>
+        <div class="stat-card blue"><div class="stat-label">Asignadas</div><div class="stat-value" id="lin-stat-asig">0</div></div>
+        <div class="stat-card amber"><div class="stat-label">Disponibles</div><div class="stat-value" id="lin-stat-disp">0</div></div>
+        <div class="stat-card"><div class="stat-label">De baja</div><div class="stat-value" id="lin-stat-baja">0</div></div>
+      </div>
+      <div class="table-card">
+        <div class="table-header">
+          <div class="table-title">Líneas registradas</div>
+          <div class="search-box"><span style="color:var(--text3)">🔍</span>
+            <input type="text" placeholder="Buscar número, operadora…" id="search-lineas" oninput="renderLineas()">
+          </div>
+        </div>
+        <div style="overflow-x:auto">
+          <table style="width:100%">
+            <thead><tr><th>Número</th><th>Operadora</th><th>ICCID</th><th>Plan</th><th>Costo/mes</th><th>Estado</th><th>Asignada a</th><th></th></tr></thead>
+            <tbody id="lineas-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ FORMATOS DE RESGUARDO ══ -->
+  <div id="view-plantillas-res" class="view">
+    <div class="topbar">
+      <div><div class="topbar-title">Formatos de resguardo</div></div>
+      <button class="btn btn-primary" onclick="abrirModalPlantillaRes()">+ Nuevo formato</button>
+    </div>
+    <div class="content">
+      <div class="alert alert-info" style="margin-bottom:20px">
+        <span>💡</span>
+        <span>Define un formato por tipo de resguardo y empresa. Al generar la hoja, el sistema usa automáticamente el formato correspondiente.</span>
+      </div>
+      <div id="plantillas-res-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px"></div>
+    </div>
+  </div>
+
+
 </main>
 
 <!-- ══════════ MODALES ══════════ -->
@@ -1073,6 +1127,122 @@
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('modal-invitar')">Cancelar</button>
       <button class="btn btn-primary" id="inv-btn" onclick="invitarUsuario()">📧 Enviar invitación</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- Modal: Nueva Línea -->
+<div id="modal-linea" class="modal-overlay">
+  <div class="modal" style="width:520px">
+    <div class="modal-header">
+      <span style="font-size:18px">📡</span>
+      <div class="modal-title" id="modal-linea-titulo">Nueva línea telefónica</div>
+      <button class="modal-close" onclick="closeModal('modal-linea')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Número *</label>
+          <input type="tel" id="lin-numero" placeholder="Ej. 9511234567">
+        </div>
+        <div class="form-group">
+          <label>Operadora *</label>
+          <input type="text" id="lin-operadora" placeholder="Telcel, AT&T, Movistar…" list="dl-operadoras">
+          <datalist id="dl-operadoras">
+            <option value="Telcel">
+            <option value="AT&T">
+            <option value="Movistar">
+            <option value="Unefon">
+            <option value="Virgin Mobile">
+          </datalist>
+        </div>
+        <div class="form-group">
+          <label>ICCID del chip</label>
+          <input type="text" id="lin-iccid" placeholder="89521…" style="font-family:var(--mono)">
+        </div>
+        <div class="form-group">
+          <label>Plan / tarifa</label>
+          <input type="text" id="lin-plan" placeholder="Ej. Plan Negocios 10GB">
+        </div>
+        <div class="form-group">
+          <label>Costo mensual $</label>
+          <input type="number" id="lin-costo" placeholder="0.00" step="0.01" min="0">
+        </div>
+        <div class="form-group">
+          <label>Estado</label>
+          <select id="lin-estado">
+            <option value="Disponible">Disponible</option>
+            <option value="Asignada">Asignada</option>
+            <option value="Baja">De baja</option>
+          </select>
+        </div>
+        <div class="form-group full">
+          <label>Notas</label>
+          <input type="text" id="lin-notas" placeholder="Observaciones opcionales">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-linea')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarLinea()">💾 Guardar línea</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Formato de Resguardo -->
+<div id="modal-plantilla-res" class="modal-overlay">
+  <div class="modal" style="width:620px">
+    <div class="modal-header">
+      <span style="font-size:18px">📋</span>
+      <div class="modal-title" id="modal-plt-res-titulo">Nuevo formato de resguardo</div>
+      <button class="modal-close" onclick="closeModal('modal-plantilla-res')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid" style="margin-bottom:16px">
+        <div class="form-group">
+          <label>Nombre del formato *</label>
+          <input type="text" id="plt-res-nombre" placeholder="Ej. Resguardo Laptop">
+        </div>
+        <div class="form-group">
+          <label>Empresa *</label>
+          <select id="plt-res-empresa"></select>
+        </div>
+        <div class="form-group">
+          <label>Tipo de resguardo *</label>
+          <select id="plt-res-tipo" onchange="plt_res_actualizarCampos()">
+            <option value="computo">Equipo de cómputo</option>
+            <option value="celular">Celular / Línea</option>
+            <option value="dispositivo">Dispositivo electrónico</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Nombre de quien entrega</label>
+          <input type="text" id="plt-res-entrego" placeholder="Ej. Sistemas TI">
+        </div>
+        <div class="form-group full">
+          <label>Nombre de la empresa en el documento</label>
+          <input type="text" id="plt-res-empresa-doc" placeholder="Ej. CAR COMERCIALIZADORA S.A DE C.V">
+        </div>
+      </div>
+
+      <!-- Campos activos -->
+      <div style="margin-bottom:14px">
+        <div style="font-size:12px;font-weight:500;color:var(--text2);margin-bottom:10px">Campos a mostrar en el documento</div>
+        <div id="plt-res-campos-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px"></div>
+      </div>
+
+      <!-- Cláusula -->
+      <div class="form-group full">
+        <label>Cláusula legal</label>
+        <textarea id="plt-res-clausula" rows="4"
+          style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:10px 12px;color:var(--text);font-family:var(--font);font-size:13px;resize:vertical;outline:none"
+          placeholder="Texto de responsabilidad que aparece en el documento…"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-plantilla-res')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarPlantillaRes()">💾 Guardar formato</button>
     </div>
   </div>
 </div>
@@ -1517,7 +1687,9 @@ let DB = {
     empresas:     ['Empresa Principal'],
     centrosCosto: ['CC-001 General']
   },
-  plantillas: []
+  plantillas: [],
+  lineas: [],
+  plantillasResguardo: []
 };
 
 // ─── FIRESTORE: guardar y cargar ─────────────────────────────────
@@ -1550,7 +1722,7 @@ function iniciarListeners() {
   _dbListeners.forEach(u => u());
   _dbListeners = [];
 
-  const colecciones = ['resguardos','compras','empleados','almacen','equiposCat'];
+  const colecciones = ['resguardos','compras','empleados','almacen','equiposCat','lineas','plantillasResguardo'];
   colecciones.forEach(col => {
     const unsub = db.collection(col).onSnapshot(snap => {
       DB[col] = snap.docs.map(d => d.data());
@@ -1599,7 +1771,7 @@ function refrescarVistaActiva() {
 // ─── REEMPLAZAR guardarDB por funciones Firebase ─────────────────
 // Interceptar las llamadas a DB.xxx.push() → guardar en Firestore
 // La estrategia: sobrescribir guardarDB para sincronizar la colección entera
-const _colecciones = ['resguardos','compras','empleados','almacen','equiposCat'];
+const _colecciones = ['resguardos','compras','empleados','almacen','equiposCat','lineas','plantillasResguardo'];
 
 async function guardarColeccion(col) {
   const batch = db.batch();
@@ -1640,8 +1812,10 @@ function switchView(view) {
   if (view === 'armar')       renderArmarVista();
   if (view === 'empleados')   renderEmpleados();
   if (view === 'equipos-cat') renderEquiposCat();
-  if (view === 'catalogos')   renderCatalogos();
-  if (view === 'usuarios')    renderUsuarios();
+  if (view === 'catalogos')     renderCatalogos();
+  if (view === 'usuarios')      renderUsuarios();
+  if (view === 'lineas')        renderLineas();
+  if (view === 'plantillas-res') renderPlantillasRes();
 }
 
 // ─── MODAL ───────────────────────────────────────────────────────
@@ -1692,6 +1866,15 @@ function openModal(id) {
     const lbl = document.getElementById('arm-costo-unit'); if(lbl) lbl.textContent='$0.00';
     const tot = document.getElementById('arm-total-label'); if(tot) tot.textContent='$0.00';
     const az  = document.getElementById('arm-alerta-stock'); if(az) az.style.display='none';
+  }
+  if (id === 'modal-linea' && !lin_editId) {
+    lin_editId = null;
+    document.getElementById('modal-linea-titulo').textContent = 'Nueva línea telefónica';
+    ['lin-numero','lin-operadora','lin-iccid','lin-plan','lin-notas'].forEach(f => {
+      const el = document.getElementById(f); if(el) el.value = '';
+    });
+    const ce = document.getElementById('lin-costo'); if(ce) ce.value = '';
+    const se = document.getElementById('lin-estado'); if(se) se.value = 'Disponible';
   }
   if (id === 'modal-ajuste-almacen') {
     const today = new Date().toISOString().split('T')[0];
@@ -3756,6 +3939,8 @@ function actualizarBadges() {
   const dispAlm = (DB.almacen||[]).reduce((s,a) => s + alm_stockDisp(a), 0);
   const badgeAlm = document.getElementById('badge-almacen');
   if (badgeAlm) badgeAlm.textContent = dispAlm;
+  const badgeLin = document.getElementById('badge-lineas');
+  if (badgeLin) badgeLin.textContent = (DB.lineas||[]).length;
 }
 
 // ─── IMPORTAR EXCEL ──────────────────────────────────────────────
@@ -4039,6 +4224,286 @@ async function eliminarUsuario(uid, email) {
   await db.collection('usuarios').doc(uid).delete();
   toast('Usuario eliminado', '🗑');
   renderUsuarios();
+}
+
+// ─── MÓDULO LÍNEAS TELEFÓNICAS ────────────────────────────────────
+
+let lin_editId = null;
+
+function renderLineas() {
+  const q = (document.getElementById('search-lineas')?.value || '').toLowerCase();
+  const rows = (DB.lineas || []).filter(l =>
+    (l.numero||'').includes(q) || (l.operadora||'').toLowerCase().includes(q) ||
+    (l.plan||'').toLowerCase().includes(q)
+  );
+  const total = DB.lineas.length;
+  const asig  = DB.lineas.filter(l => l.estado === 'Asignada').length;
+  const disp  = DB.lineas.filter(l => l.estado === 'Disponible').length;
+  const baja  = DB.lineas.filter(l => l.estado === 'Baja').length;
+
+  const se = id => document.getElementById(id);
+  if (se('lin-stat-total')) se('lin-stat-total').textContent = total;
+  if (se('lin-stat-asig'))  se('lin-stat-asig').textContent  = asig;
+  if (se('lin-stat-disp'))  se('lin-stat-disp').textContent  = disp;
+  if (se('lin-stat-baja'))  se('lin-stat-baja').textContent  = baja;
+  const badge = document.getElementById('badge-lineas');
+  if (badge) badge.textContent = total;
+
+  const tbody = document.getElementById('lineas-tbody');
+  if (!tbody) return;
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">📡</div><div class="empty-title">Sin líneas registradas</div><div class="empty-sub">Agrega tu primera línea telefónica</div></div></td></tr>`;
+    return;
+  }
+  const estadoColor = { 'Disponible': 'badge-teal', 'Asignada': 'badge-blue', 'Baja': 'badge-red' };
+  tbody.innerHTML = rows.map(l => `<tr>
+    <td><strong style="font-family:var(--mono)">${l.numero||'—'}</strong></td>
+    <td class="text-sm">${l.operadora||'—'}</td>
+    <td class="text-sm" style="font-family:var(--mono);font-size:11px">${l.iccid||'—'}</td>
+    <td class="text-sm">${l.plan||'—'}</td>
+    <td class="mono">${l.costo ? formatMoney(l.costo)+'/mes' : '—'}</td>
+    <td><span class="badge ${estadoColor[l.estado]||'badge-gray'}">${l.estado||'—'}</span></td>
+    <td class="text-sm">${l.empleado||'—'}</td>
+    <td><div class="row-actions" style="opacity:1">
+      <button class="btn btn-ghost btn-sm" onclick="editarLinea('${l.id}')">✏</button>
+      <button class="icon-btn del" onclick="eliminarLinea('${l.id}')">🗑</button>
+    </div></td>
+  </tr>`).join('');
+}
+
+function guardarLinea() {
+  const numero    = document.getElementById('lin-numero').value.trim();
+  const operadora = document.getElementById('lin-operadora').value.trim();
+  if (!numero)    { toast('Escribe el número', '⚠️'); return; }
+  if (!operadora) { toast('Escribe la operadora', '⚠️'); return; }
+
+  const linea = {
+    id:         lin_editId || Date.now(),
+    numero,
+    operadora,
+    iccid:      document.getElementById('lin-iccid').value.trim(),
+    plan:       document.getElementById('lin-plan').value.trim(),
+    costo:      parseFloat(document.getElementById('lin-costo').value) || 0,
+    estado:     document.getElementById('lin-estado').value,
+    notas:      document.getElementById('lin-notas').value.trim(),
+    empleado:   lin_editId ? (DB.lineas.find(l=>l.id==lin_editId)?.empleado||'') : '',
+    fecha:      lin_editId ? (DB.lineas.find(l=>l.id==lin_editId)?.fecha||new Date().toISOString().split('T')[0]) : new Date().toISOString().split('T')[0],
+  };
+
+  if (lin_editId) {
+    const idx = DB.lineas.findIndex(l => l.id == lin_editId);
+    if (idx >= 0) DB.lineas[idx] = linea;
+  } else {
+    DB.lineas.push(linea);
+  }
+  guardarDB();
+  closeModal('modal-linea');
+  renderLineas();
+  toast(lin_editId ? 'Línea actualizada ✓' : 'Línea registrada ✓');
+  lin_editId = null;
+}
+
+function editarLinea(id) {
+  const l = DB.lineas.find(x => x.id == id);
+  if (!l) return;
+  lin_editId = id;
+  document.getElementById('modal-linea-titulo').textContent = 'Editar línea';
+  document.getElementById('lin-numero').value    = l.numero    || '';
+  document.getElementById('lin-operadora').value = l.operadora || '';
+  document.getElementById('lin-iccid').value     = l.iccid     || '';
+  document.getElementById('lin-plan').value      = l.plan      || '';
+  document.getElementById('lin-costo').value     = l.costo     || '';
+  document.getElementById('lin-estado').value    = l.estado    || 'Disponible';
+  document.getElementById('lin-notas').value     = l.notas     || '';
+  openModal('modal-linea');
+}
+
+function eliminarLinea(id) {
+  const l = DB.lineas.find(x => x.id == id);
+  if (!l || !confirm(`¿Eliminar la línea ${l.numero}?`)) return;
+  DB.lineas = DB.lineas.filter(x => x.id != id);
+  guardarDB();
+  renderLineas();
+  toast('Línea eliminada', '🗑');
+}
+
+// ─── MÓDULO PLANTILLAS DE RESGUARDO ──────────────────────────────
+
+const CAMPOS_POR_TIPO = {
+  computo: [
+    { id: 'equipo',      label: 'Tipo de equipo' },
+    { id: 'marca',       label: 'Marca' },
+    { id: 'modelo',      label: 'Modelo' },
+    { id: 'color',       label: 'Color' },
+    { id: 'serie',       label: 'Número de serie (S/N)' },
+    { id: 'procesador',  label: 'Procesador' },
+    { id: 'disco',       label: 'Disco duro' },
+    { id: 'ram',         label: 'Memoria RAM' },
+    { id: 'so',          label: 'Sistema operativo' },
+    { id: 'lan',         label: 'LAN Inalámbrica' },
+    { id: 'webcam',      label: 'Web Cam' },
+    { id: 'accesorios',  label: 'Accesorios' },
+  ],
+  celular: [
+    { id: 'numero',      label: 'Número de línea' },
+    { id: 'operadora',   label: 'Operadora' },
+    { id: 'iccid',       label: 'ICCID del chip' },
+    { id: 'plan',        label: 'Plan / tarifa' },
+    { id: 'equipo',      label: 'Equipo físico (opcional)' },
+    { id: 'marca',       label: 'Marca del equipo' },
+    { id: 'modelo',      label: 'Modelo del equipo' },
+    { id: 'imei',        label: 'IMEI' },
+    { id: 'color',       label: 'Color' },
+    { id: 'accesorios',  label: 'Accesorios' },
+  ],
+  dispositivo: [
+    { id: 'equipo',      label: 'Tipo de dispositivo' },
+    { id: 'marca',       label: 'Marca' },
+    { id: 'modelo',      label: 'Modelo' },
+    { id: 'color',       label: 'Color' },
+    { id: 'serie',       label: 'Número de serie (S/N)' },
+    { id: 'accesorios',  label: 'Accesorios' },
+  ],
+};
+
+const CLAUSULA_DEFAULT = 'COMPROMETIENDOME A DARLES UN BUEN USO, ADECUADO Y A DEVOLVERLOS CUANDO LA EMPRESA {EMPRESA} LO REQUIERA, AL MISMO TIEMPO FACULTO A LA EMPRESA A DESCONTAR DE MIS PERCEPCIONES EL IMPORTE TOTAL EN CASO DE EXTRAVÍO O DESCOMPOSTURA POR MAL USO, O MALTRATO.';
+
+let plt_res_editId = null;
+
+function plt_res_actualizarCampos() {
+  const tipo  = document.getElementById('plt-res-tipo')?.value || 'computo';
+  const campos = CAMPOS_POR_TIPO[tipo] || [];
+  const grid   = document.getElementById('plt-res-campos-grid');
+  if (!grid) return;
+  // Leer checks actuales si los hay
+  const activos = {};
+  grid.querySelectorAll('input[type=checkbox]').forEach(cb => { activos[cb.dataset.id] = cb.checked; });
+  grid.innerHTML = campos.map(c => {
+    const checked = activos[c.id] !== undefined ? activos[c.id] : true;
+    return `<label style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:13px">
+      <input type="checkbox" data-id="${c.id}" ${checked?'checked':''} style="accent-color:var(--accent)">
+      ${c.label}
+    </label>`;
+  }).join('');
+}
+
+function abrirModalPlantillaRes(id) {
+  plt_res_editId = id || null;
+  const p = id ? DB.plantillasResguardo.find(x => x.id == id) : null;
+  document.getElementById('modal-plt-res-titulo').textContent = p ? 'Editar formato' : 'Nuevo formato de resguardo';
+  document.getElementById('plt-res-nombre').value      = p?.nombre      || '';
+  document.getElementById('plt-res-entrego').value     = p?.entrego     || 'Sistemas TI';
+  document.getElementById('plt-res-empresa-doc').value = p?.empresaDoc  || 'CAR COMERCIALIZADORA S.A DE C.V';
+  document.getElementById('plt-res-clausula').value    = p?.clausula    || CLAUSULA_DEFAULT;
+  // Poblar empresa
+  const selEmp = document.getElementById('plt-res-empresa');
+  selEmp.innerHTML = (DB.catalogos?.empresas || ['Empresa Principal'])
+    .map(e => `<option value="${e}" ${p?.empresa===e?'selected':''}>${e}</option>`).join('');
+  // Tipo
+  document.getElementById('plt-res-tipo').value = p?.tipo || 'computo';
+  plt_res_actualizarCampos();
+  // Si hay plantilla existente, marcar sus campos
+  if (p?.campos) {
+    setTimeout(() => {
+      document.querySelectorAll('#plt-res-campos-grid input[type=checkbox]').forEach(cb => {
+        cb.checked = p.campos.includes(cb.dataset.id);
+      });
+    }, 50);
+  }
+  openModal('modal-plantilla-res');
+}
+
+function guardarPlantillaRes() {
+  const nombre = document.getElementById('plt-res-nombre').value.trim();
+  if (!nombre) { toast('Escribe el nombre del formato', '⚠️'); return; }
+  const campos = [];
+  document.querySelectorAll('#plt-res-campos-grid input[type=checkbox]:checked').forEach(cb => campos.push(cb.dataset.id));
+
+  const plt = {
+    id:          plt_res_editId || Date.now(),
+    nombre,
+    empresa:     document.getElementById('plt-res-empresa').value,
+    tipo:        document.getElementById('plt-res-tipo').value,
+    entrego:     document.getElementById('plt-res-entrego').value.trim(),
+    empresaDoc:  document.getElementById('plt-res-empresa-doc').value.trim(),
+    clausula:    document.getElementById('plt-res-clausula').value.trim(),
+    campos,
+  };
+
+  if (!DB.plantillasResguardo) DB.plantillasResguardo = [];
+  if (plt_res_editId) {
+    const idx = DB.plantillasResguardo.findIndex(x => x.id == plt_res_editId);
+    if (idx >= 0) DB.plantillasResguardo[idx] = plt;
+    else DB.plantillasResguardo.push(plt);
+  } else {
+    DB.plantillasResguardo.push(plt);
+  }
+  guardarDB();
+  closeModal('modal-plantilla-res');
+  renderPlantillasRes();
+  toast(plt_res_editId ? 'Formato actualizado ✓' : 'Formato creado ✓');
+  plt_res_editId = null;
+}
+
+function renderPlantillasRes() {
+  const grid = document.getElementById('plantillas-res-grid');
+  if (!grid) return;
+  const pts = DB.plantillasResguardo || [];
+  if (!pts.length) {
+    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:48px 24px;color:var(--text3)">
+      <div style="font-size:36px;margin-bottom:12px;opacity:.4">📋</div>
+      <div style="font-size:14px;color:var(--text2);margin-bottom:6px">Sin formatos definidos</div>
+      <div style="font-size:12px">Crea el primer formato para empezar a generar hojas de resguardo</div>
+    </div>`;
+    return;
+  }
+  const iconos = { computo:'🖥', celular:'📱', dispositivo:'📟' };
+  const nombres = { computo:'Cómputo', celular:'Celular / Línea', dispositivo:'Dispositivo' };
+  grid.innerHTML = pts.map(p => `
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden">
+      <div style="padding:16px 18px;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+          <div style="width:36px;height:36px;background:rgba(79,142,247,0.12);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px">${iconos[p.tipo]||'📋'}</div>
+          <div style="flex:1">
+            <div style="font-size:14px;font-weight:600">${p.nombre}</div>
+            <div style="font-size:11px;color:var(--text3)">${p.empresa} · ${nombres[p.tipo]||p.tipo}</div>
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:6px">Campos activos (${(p.campos||[]).length}):</div>
+        <div style="display:flex;flex-wrap:wrap;gap:3px">
+          ${(p.campos||[]).map(c => {
+            const campo = (CAMPOS_POR_TIPO[p.tipo]||[]).find(x=>x.id===c);
+            return `<span style="font-size:10px;padding:2px 7px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text2)">${campo?.label||c}</span>`;
+          }).join('')}
+        </div>
+      </div>
+      <div style="padding:10px 18px;display:flex;gap:8px">
+        <button onclick="abrirModalPlantillaRes(${p.id})" class="btn btn-ghost btn-sm" style="flex:1">✏ Editar</button>
+        <button onclick="eliminarPlantillaRes(${p.id})" class="btn btn-danger btn-sm">🗑</button>
+      </div>
+    </div>`).join('');
+}
+
+function eliminarPlantillaRes(id) {
+  const p = (DB.plantillasResguardo||[]).find(x=>x.id==id);
+  if (!p || !confirm(`¿Eliminar el formato "${p.nombre}"?`)) return;
+  DB.plantillasResguardo = DB.plantillasResguardo.filter(x=>x.id!=id);
+  guardarDB();
+  renderPlantillasRes();
+  toast('Formato eliminado', '🗑');
+}
+
+// ── Obtener plantilla para un resguardo ───────────────────────────
+function obtenerPlantillaParaResguardo(resguardo) {
+  const pts = DB.plantillasResguardo || [];
+  if (!pts.length) return null;
+  // Determinar tipo según tipo de equipo
+  const tipoFormato2 = tipoFormato(resguardo.tipo);
+  // Buscar por empresa y tipo
+  const empresa = resguardo.empresa || '';
+  let plt = pts.find(p => p.empresa === empresa && p.tipo === tipoFormato2);
+  if (!plt) plt = pts.find(p => p.tipo === tipoFormato2);
+  return plt || null;
 }
 
 // ─── LOGOS RESGUARDO (base64) ────────────────────────────────────
