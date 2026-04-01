@@ -1044,7 +1044,12 @@
   <div id="view-lineas" class="view">
     <div class="topbar">
       <div><div class="topbar-title">Líneas telefónicas</div></div>
-      <button class="btn btn-primary" onclick="openModal('modal-linea')">+ Nueva línea</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost btn-sm" onclick="descargarPlantillaLineas()">⬇ Plantilla Excel</button>
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('lin-excel-input').click()">📥 Importar Excel</button>
+        <input type="file" id="lin-excel-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="importarLineasExcel(this.files[0])">
+        <button class="btn btn-primary" onclick="openModal('modal-linea')">+ Nueva línea</button>
+      </div>
     </div>
     <div class="content">
       <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px">
@@ -1131,6 +1136,24 @@
   </div>
 </div>
 
+
+
+<!-- Modal: Resultado importación líneas -->
+<div id="modal-import-lineas" class="modal-overlay">
+  <div class="modal" style="width:520px">
+    <div class="modal-header">
+      <span style="font-size:18px">📥</span>
+      <div class="modal-title">Resultado de importación</div>
+      <button class="modal-close" onclick="closeModal('modal-import-lineas')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="import-lineas-resultado"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="closeModal('modal-import-lineas')">Entendido</button>
+    </div>
+  </div>
+</div>
 
 <!-- Modal: Nueva Línea -->
 <div id="modal-linea" class="modal-overlay">
@@ -4361,6 +4384,170 @@ async function eliminarUsuario(uid, email) {
   await db.collection('usuarios').doc(uid).delete();
   toast('Usuario eliminado', '🗑');
   renderUsuarios();
+}
+
+
+// ─── IMPORTAR LÍNEAS DESDE EXCEL ─────────────────────────────────
+
+// Columnas esperadas en el Excel (en ese orden o por nombre)
+const LIN_COLUMNAS = [
+  { key: 'numero',     label: 'Número',       requerido: true  },
+  { key: 'operadora',  label: 'Operadora',    requerido: true  },
+  { key: 'iccid',      label: 'ICCID',        requerido: false },
+  { key: 'plan',       label: 'Plan',         requerido: false },
+  { key: 'costo',      label: 'Costo mensual', requerido: false },
+  { key: 'estado',     label: 'Estado',       requerido: false },
+  { key: 'notas',      label: 'Notas',        requerido: false },
+];
+
+function descargarPlantillaLineas() {
+  if (typeof XLSX === 'undefined') { toast('Cargando librería…'); return; }
+  const cabecera = LIN_COLUMNAS.map(c => c.label);
+  const ejemplo  = ['9511234567','Telcel','8952140123456789','Plan Negocios 10GB','450','Disponible','Línea de ejemplo'];
+  const ws = XLSX.utils.aoa_to_sheet([cabecera, ejemplo]);
+
+  // Ancho de columnas
+  ws['!cols'] = [14,12,22,24,14,12,20].map(w => ({ wch: w }));
+
+  // Estilo de cabecera (XLSX no soporta estilos en la versión CDN, pero al menos lo intentamos)
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Líneas');
+  XLSX.writeFile(wb, 'Plantilla_Lineas_Morgan.xlsx');
+  toast('Plantilla descargada ✓');
+}
+
+function importarLineasExcel(file) {
+  if (!file) return;
+  if (typeof XLSX === 'undefined') { toast('Cargando librería XLSX…'); return; }
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb   = XLSX.read(e.target.result, { type: 'array' });
+      const ws   = wb.Sheets[wb.SheetNames[0]];
+      const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
+
+      if (!data || data.length < 2) {
+        toast('El archivo está vacío o no tiene datos', '⚠️'); return;
+      }
+
+      // Detectar cabeceras (primera fila)
+      const headers = (data[0] || []).map(h => (h||'').toString().trim().toLowerCase());
+      const colMap  = {};
+      LIN_COLUMNAS.forEach(col => {
+        // Buscar por nombre exacto o parcial
+        const idx = headers.findIndex(h =>
+          h === col.label.toLowerCase() ||
+          h.includes(col.key.toLowerCase()) ||
+          col.label.toLowerCase().includes(h)
+        );
+        if (idx >= 0) colMap[col.key] = idx;
+      });
+
+      // Verificar columnas requeridas
+      const faltantes = LIN_COLUMNAS.filter(c => c.requerido && colMap[c.key] === undefined).map(c => c.label);
+      if (faltantes.length) {
+        mostrarResultadoImport(0, 0, 0, [`Columnas requeridas no encontradas: ${faltantes.join(', ')}`]);
+        openModal('modal-import-lineas');
+        return;
+      }
+
+      let nuevas = 0, actualizadas = 0, errores = [];
+      const estadosValidos = ['Disponible','Asignada','Baja'];
+
+      // Procesar filas (desde la 2ª)
+      for (let i = 1; i < data.length; i++) {
+        const row = data[i];
+        if (!row || row.every(c => !c)) continue; // fila vacía
+
+        const getVal = (key) => {
+          const idx = colMap[key];
+          return idx !== undefined ? (row[idx] !== undefined && row[idx] !== null ? row[idx].toString().trim() : '') : '';
+        };
+
+        const numero    = getVal('numero').replace(/\D/g, '');  // solo dígitos
+        const operadora = getVal('operadora');
+
+        if (!numero) { errores.push(`Fila ${i+1}: número vacío o inválido`); continue; }
+        if (!operadora) { errores.push(`Fila ${i+1}: operadora vacía`); continue; }
+
+        const estado = estadosValidos.includes(getVal('estado')) ? getVal('estado') : 'Disponible';
+        const costo  = parseFloat(getVal('costo')) || 0;
+
+        // ¿Ya existe? Buscar por número
+        const existente = DB.lineas.find(l => l.numero.replace(/\D/g,'') === numero);
+
+        if (existente) {
+          // Actualizar solo campos no vacíos del Excel
+          if (operadora)            existente.operadora = operadora;
+          if (getVal('iccid'))      existente.iccid     = getVal('iccid');
+          if (getVal('plan'))       existente.plan      = getVal('plan');
+          if (costo > 0)            existente.costo     = costo;
+          if (getVal('estado'))     existente.estado    = estado;
+          if (getVal('notas'))      existente.notas     = getVal('notas');
+          actualizadas++;
+        } else {
+          // Nueva línea
+          DB.lineas.push({
+            id:         Date.now() + Math.random(),
+            numero,
+            operadora,
+            iccid:      getVal('iccid'),
+            plan:       getVal('plan'),
+            costo,
+            estado,
+            notas:      getVal('notas'),
+            empleado:   '',
+            fecha:      new Date().toISOString().split('T')[0],
+          });
+          nuevas++;
+        }
+      }
+
+      guardarDB();
+      renderLineas();
+      actualizarBadges();
+      mostrarResultadoImport(nuevas, actualizadas, errores.length, errores);
+      openModal('modal-import-lineas');
+
+    } catch(err) {
+      console.error(err);
+      toast('Error al leer el archivo: ' + err.message, '⚠️');
+    }
+    // Limpiar el input para permitir cargar el mismo archivo de nuevo
+    document.getElementById('lin-excel-input').value = '';
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function mostrarResultadoImport(nuevas, actualizadas, nErrores, errores) {
+  const div = document.getElementById('import-lineas-resultado');
+  if (!div) return;
+  div.innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+        <div style="text-align:center;padding:14px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.2);border-radius:8px">
+          <div style="font-size:26px;font-weight:700;color:var(--green)">${nuevas}</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:4px">Líneas nuevas</div>
+        </div>
+        <div style="text-align:center;padding:14px;background:rgba(79,142,247,0.1);border:1px solid rgba(79,142,247,0.2);border-radius:8px">
+          <div style="font-size:26px;font-weight:700;color:var(--accent)">${actualizadas}</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:4px">Actualizadas</div>
+        </div>
+        <div style="text-align:center;padding:14px;background:${nErrores>0?'rgba(239,68,68,0.1)':'rgba(255,255,255,0.03)'};border:1px solid ${nErrores>0?'rgba(239,68,68,0.2)':'var(--border)'};border-radius:8px">
+          <div style="font-size:26px;font-weight:700;color:${nErrores>0?'var(--red)':'var(--text3)'}">${nErrores}</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:4px">Con errores</div>
+        </div>
+      </div>
+      ${errores.length ? `
+        <div style="background:rgba(239,68,68,0.05);border:1px solid rgba(239,68,68,0.2);border-radius:6px;padding:12px;max-height:180px;overflow-y:auto">
+          <div style="font-size:12px;font-weight:500;color:var(--red);margin-bottom:8px">Filas con problemas:</div>
+          ${errores.map(e=>`<div style="font-size:12px;color:var(--text2);padding:3px 0;border-bottom:1px solid var(--border)">• ${e}</div>`).join('')}
+        </div>` : ''}
+      <div style="font-size:12px;color:var(--text3)">
+        💡 Si una línea ya existía (mismo número), sus datos se actualizaron con los del Excel. Solo se actualizan los campos que no están vacíos.
+      </div>
+    </div>`;
 }
 
 // ─── MÓDULO LÍNEAS TELEFÓNICAS ────────────────────────────────────
