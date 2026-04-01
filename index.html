@@ -1293,7 +1293,7 @@
         </div>
         <div class="form-group">
           <label>Tipo de equipo *</label>
-          <select id="res-tipo">
+          <select id="res-tipo" onchange="res_actualizarCampos()">
             <option value="Computadora">Computadora</option>
             <option value="Laptop">Laptop</option>
             <option value="Celular">Celular</option>
@@ -1310,15 +1310,69 @@
             <option value="Arrendado">Arrendado</option>
           </select>
         </div>
-        <div class="form-group">
+
+        <!-- Sección Celular — se muestra solo si tipo = Celular -->
+        <div id="grupo-celular" style="display:none;grid-column:1/-1;background:rgba(45,212,191,0.05);border:1px solid rgba(45,212,191,0.2);border-radius:8px;padding:14px">
+          <div style="font-size:12px;font-weight:500;color:var(--teal);margin-bottom:12px;text-transform:uppercase;letter-spacing:.6px">📡 Línea telefónica</div>
+          <div class="form-grid" style="margin:0">
+            <div class="form-group">
+              <label>Línea *</label>
+              <select id="res-linea-id" onchange="res_seleccionarLinea()">
+                <option value="">— Seleccionar línea disponible —</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Número</label>
+              <input type="text" id="res-linea-num" placeholder="Se llena automático" style="font-family:var(--mono)" readonly>
+            </div>
+            <div class="form-group">
+              <label>Operadora</label>
+              <input type="text" id="res-linea-op" placeholder="Se llena automático" readonly>
+            </div>
+            <div class="form-group">
+              <label>Plan</label>
+              <input type="text" id="res-linea-plan" placeholder="Se llena automático" readonly>
+            </div>
+          </div>
+          <!-- Toggle equipo físico -->
+          <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(45,212,191,0.15)">
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;font-weight:500">
+              <input type="checkbox" id="res-celular-con-equipo" onchange="res_toggleEquipoCelular()" style="accent-color:var(--teal);width:16px;height:16px">
+              ¿Se asigna también un equipo físico (teléfono)?
+            </label>
+          </div>
+          <div id="grupo-equipo-celular" style="display:none;margin-top:12px">
+            <div class="form-grid" style="margin:0">
+              <div class="form-group">
+                <label>Marca del equipo</label>
+                <input type="text" id="res-cel-marca" placeholder="Samsung, Apple…" list="dl-marcas">
+              </div>
+              <div class="form-group">
+                <label>Modelo</label>
+                <input type="text" id="res-cel-modelo" placeholder="Galaxy A55…">
+              </div>
+              <div class="form-group">
+                <label>IMEI</label>
+                <input type="text" id="res-cel-imei" placeholder="354123456789012" style="font-family:var(--mono)">
+              </div>
+              <div class="form-group">
+                <label>Color</label>
+                <input type="text" id="res-cel-color" placeholder="Negro, Blanco…">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Campos normales (ocultos para celular) -->
+        <div class="form-group" id="grupo-marca">
           <label>Marca</label>
           <input type="text" id="res-marca" placeholder="Dell, HP, Apple…" list="dl-marcas" autocomplete="off">
         </div>
-        <div class="form-group">
+        <div class="form-group" id="grupo-modelo">
           <label>Modelo</label>
           <input type="text" id="res-modelo" placeholder="Ej. Latitude 5520">
         </div>
-        <div class="form-group">
+        <div class="form-group" id="grupo-serie">
           <label>No. de serie *</label>
           <input type="text" id="res-serie" placeholder="Ej. SVC1234ABC">
         </div>
@@ -1840,6 +1894,7 @@ function openModal(id) {
     if (selCen && selCen.options.length) selCen.selectedIndex = 0;
     limpiarEmpleadoAC();
     limpiarCompraAC();
+    res_actualizarCampos();
   }
   if (id === 'modal-compra') {
     const today = new Date().toISOString().split('T')[0];
@@ -2167,6 +2222,52 @@ document.addEventListener('click', e => {
   if (ac2 && inp2 && !ac2.contains(e.target) && e.target !== inp2) ac2.style.display = 'none';
 });
 
+
+// ─── RESGUARDO CELULAR ────────────────────────────────────────────
+function res_actualizarCampos() {
+  const tipo = document.getElementById('res-tipo')?.value;
+  const esCelular = tipo === 'Celular';
+
+  // Mostrar/ocultar sección celular
+  const grupoCel = document.getElementById('grupo-celular');
+  if (grupoCel) grupoCel.style.display = esCelular ? '' : 'none';
+
+  // Mostrar/ocultar campos normales
+  ['grupo-marca','grupo-modelo','grupo-serie'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = esCelular ? 'none' : '';
+  });
+
+  // Si es celular, cargar líneas disponibles
+  if (esCelular) res_cargarLineas();
+}
+
+function res_cargarLineas() {
+  const sel = document.getElementById('res-linea-id');
+  if (!sel) return;
+  const disponibles = (DB.lineas || []).filter(l => l.estado === 'Disponible');
+  sel.innerHTML = '<option value="">— Seleccionar línea disponible —</option>' +
+    disponibles.map(l => `<option value="${l.id}">${l.numero} · ${l.operadora}${l.plan?' · '+l.plan:''}</option>`).join('');
+  if (!disponibles.length) {
+    sel.innerHTML = '<option value="">Sin líneas disponibles</option>';
+  }
+}
+
+function res_seleccionarLinea() {
+  const sel = document.getElementById('res-linea-id');
+  const id  = sel?.value;
+  const lin = id ? (DB.lineas||[]).find(l => l.id == id) : null;
+  document.getElementById('res-linea-num').value  = lin?.numero    || '';
+  document.getElementById('res-linea-op').value   = lin?.operadora || '';
+  document.getElementById('res-linea-plan').value = lin?.plan      || '';
+}
+
+function res_toggleEquipoCelular() {
+  const checked = document.getElementById('res-celular-con-equipo')?.checked;
+  const grp = document.getElementById('grupo-equipo-celular');
+  if (grp) grp.style.display = checked ? '' : 'none';
+}
+
 function guardarResguardo() {
   const empleado = document.getElementById('res-empleado').value;
   const serie = document.getElementById('res-serie').value.trim();
@@ -2180,28 +2281,56 @@ function guardarResguardo() {
     toast('Este equipo ya no tiene stock disponible', '⚠️'); return;
   }
 
-  DB.resguardos.push({
+  const tipo = document.getElementById('res-tipo').value;
+  const esCelular = tipo === 'Celular';
+  const lineaId   = esCelular ? document.getElementById('res-linea-id').value : null;
+  const conEquipo = esCelular && document.getElementById('res-celular-con-equipo').checked;
+
+  // Validar línea si es celular
+  if (esCelular && !lineaId) { toast('Selecciona una línea telefónica', '⚠️'); return; }
+
+  // Para celular sin equipo, no requerir serie
+  if (!esCelular && !serie) { toast('Ingresa el número de serie', '⚠️'); return; }
+
+  const nuevoRes = {
     id: Date.now(),
     empleado,
     compraId: compraId || null,
-    tipo:             document.getElementById('res-tipo').value,
+    tipo,
     modalidad:        document.getElementById('res-modalidad').value,
-    marca:            document.getElementById('res-marca').value.trim(),
-    modelo:           document.getElementById('res-modelo').value.trim(),
-    serie,
+    marca:            esCelular && conEquipo ? document.getElementById('res-cel-marca').value.trim() : document.getElementById('res-marca').value.trim(),
+    modelo:           esCelular && conEquipo ? document.getElementById('res-cel-modelo').value.trim() : document.getElementById('res-modelo').value.trim(),
+    serie:            esCelular && conEquipo ? document.getElementById('res-cel-imei').value.trim() : serie,
+    color:            esCelular && conEquipo ? document.getElementById('res-cel-color').value.trim() : '',
     inventario:       document.getElementById('res-inventario').value.trim(),
     fecha,
     finArrendamiento: document.getElementById('res-fin-arr').value,
     estado:           document.getElementById('res-estado').value,
     empresa:          document.getElementById('res-empresa').value,
     centroCosto:      document.getElementById('res-centro').value,
-    obs:              document.getElementById('res-obs').value.trim()
-  });
+    obs:              document.getElementById('res-obs').value.trim(),
+    // Datos de línea (solo celular)
+    lineaId:          lineaId || null,
+    lineaNumero:      esCelular ? document.getElementById('res-linea-num').value : '',
+    lineaOperadora:   esCelular ? document.getElementById('res-linea-op').value  : '',
+    lineaPlan:        esCelular ? document.getElementById('res-linea-plan').value : '',
+    conEquipo:        esCelular ? conEquipo : false,
+  };
+
+  DB.resguardos.push(nuevoRes);
+
+  // Marcar línea como asignada
+  if (lineaId) {
+    const lin = DB.lineas.find(l => l.id == lineaId);
+    if (lin) { lin.estado = 'Asignada'; lin.empleado = empleado; }
+  }
+
   guardarDB();
   limpiarCompraAC();
   closeModal('modal-resguardo');
   renderResguardos();
   renderCompras();
+  renderLineas();
   actualizarBadges();
   toast('Resguardo guardado correctamente');
 }
@@ -3888,6 +4017,14 @@ function renderEquiposCat() {
 // ─── ELIMINAR ────────────────────────────────────────────────────
 function eliminar(modulo, id, renderFn) {
   if (!confirm('¿Eliminar este registro?')) return;
+  // Si es un resguardo de celular, liberar la línea
+  if (modulo === 'resguardos') {
+    const res = DB.resguardos.find(x => x.id === id);
+    if (res?.lineaId) {
+      const lin = DB.lineas.find(l => l.id == res.lineaId);
+      if (lin) { lin.estado = 'Disponible'; lin.empleado = ''; }
+    }
+  }
   DB[modulo] = DB[modulo].filter(x => x.id !== id);
   guardarDB();
   window[renderFn]();
