@@ -1805,6 +1805,24 @@ async function fbEliminar(coleccion, id) {
   await db.collection(coleccion).doc(String(id)).delete();
 }
 
+async function fbBorrarColeccion(coleccion) {
+  // Obtiene todos los docs y los borra en batches de 500
+  const snap = await db.collection(coleccion).get();
+  if (snap.empty) return;
+  const chunks = [];
+  let chunk = [];
+  snap.docs.forEach(doc => {
+    chunk.push(doc.ref);
+    if (chunk.length === 500) { chunks.push(chunk); chunk = []; }
+  });
+  if (chunk.length) chunks.push(chunk);
+  for (const refs of chunks) {
+    const batch = db.batch();
+    refs.forEach(ref => batch.delete(ref));
+    await batch.commit();
+  }
+}
+
 async function fbGuardarConfig() {
   await db.collection('config').doc('catalogos').set(DB.catalogos);
   await db.collection('config').doc('plantillas').set({ lista: DB.plantillas || [] });
@@ -4675,9 +4693,9 @@ function editarLinea(id) {
 }
 
 
-function borrarTodasLineas() {
-  const total     = DB.lineas.length;
-  const asignadas = DB.lineas.filter(l => l.estado === 'Asignada').length;
+async function borrarTodasLineas() {
+  const total     = (DB.lineas||[]).length;
+  const asignadas = (DB.lineas||[]).filter(l => l.estado === 'Asignada').length;
   if (!total) { toast('No hay líneas registradas', '⚠️'); return; }
 
   let msg = `¿Eliminar TODAS las ${total} líneas?`;
@@ -4687,16 +4705,32 @@ function borrarTodasLineas() {
   if (!confirm(msg)) return;
   if (!confirm('¿Confirmas que quieres borrar TODO el catálogo de líneas?')) return;
 
-  // Liberar líneas de resguardos
-  DB.resguardos.forEach(r => { if (r.lineaId) { r.lineaId = null; r.lineaNumero = ''; r.lineaOperadora = ''; r.lineaPlan = ''; } });
-  DB.lineas = [];
-  guardarDB();
-  renderLineas();
-  actualizarBadges();
-  toast('Todas las líneas eliminadas', '🗑');
+  toast('Borrando…', '⏳');
+  try {
+    // 1. Liberar líneas de resguardos en Firestore
+    const resConLinea = DB.resguardos.filter(r => r.lineaId);
+    if (resConLinea.length) {
+      const batch = db.batch();
+      resConLinea.forEach(r => {
+        r.lineaId = null; r.lineaNumero = ''; r.lineaOperadora = ''; r.lineaPlan = '';
+        batch.set(db.collection('resguardos').doc(String(r.id)), r);
+      });
+      await batch.commit();
+    }
+    // 2. Borrar TODOS los documentos de la colección lineas en Firestore
+    await fbBorrarColeccion('lineas');
+    // 3. Limpiar en memoria
+    DB.lineas = [];
+    renderLineas();
+    actualizarBadges();
+    toast('Todas las líneas eliminadas ✓', '🗑');
+  } catch(e) {
+    console.error(e);
+    toast('Error al borrar: ' + e.message, '⚠️');
+  }
 }
 
-function eliminarLinea(id) {
+async function eliminarLinea(id) {
   const l = DB.lineas.find(x => x.id == id);
   if (!l) return;
   // Verificar si tiene resguardo activo
@@ -4706,10 +4740,15 @@ function eliminarLinea(id) {
     return;
   }
   if (!confirm(`¿Eliminar la línea ${l.numero}?`)) return;
-  DB.lineas = DB.lineas.filter(x => x.id != id);
-  guardarDB();
-  renderLineas();
-  toast('Línea eliminada', '🗑');
+  try {
+    await fbEliminar('lineas', String(id));
+    DB.lineas = DB.lineas.filter(x => x.id != id);
+    renderLineas();
+    actualizarBadges();
+    toast('Línea eliminada ✓', '🗑');
+  } catch(e) {
+    toast('Error al eliminar: ' + e.message, '⚠️');
+  }
 }
 
 // ─── MÓDULO PLANTILLAS DE RESGUARDO ──────────────────────────────
