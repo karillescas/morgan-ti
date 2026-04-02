@@ -1329,16 +1329,13 @@
           </div>
         </div>
         <div class="form-group">
-          <label>Tipo de equipo *</label>
+          <label>Tipo de resguardo *</label>
           <select id="res-tipo" onchange="res_actualizarCampos()">
-            <option value="Computadora">Computadora</option>
-            <option value="Laptop">Laptop</option>
-            <option value="Celular">Celular</option>
-            <option value="Tablet">Tablet</option>
-            <option value="Monitor">Monitor</option>
-            <option value="Impresora">Impresora</option>
-            <option value="Otro">Otro</option>
+            <option value="">— Seleccionar tipo —</option>
           </select>
+          <div id="res-tipo-hint" style="font-size:11px;color:var(--text3);margin-top:4px;display:none">
+            💡 Configura formatos en <strong>Formatos resguardo</strong> para ver opciones aquí
+          </div>
         </div>
         <div class="form-group">
           <label>Modalidad *</label>
@@ -1961,6 +1958,7 @@ function openModal(id) {
     if (selCen && selCen.options.length) selCen.selectedIndex = 0;
     limpiarEmpleadoAC();
     limpiarCompraAC();
+    res_poblarTipos();
     res_actualizarCampos();
     limpiarLineaAC();
   }
@@ -2360,9 +2358,39 @@ function limpiarLineaAC() {
 }
 
 // ─── RESGUARDO CELULAR ────────────────────────────────────────────
+
+function res_poblarTipos() {
+  const sel   = document.getElementById('res-tipo');
+  const hint  = document.getElementById('res-tipo-hint');
+  if (!sel) return;
+  const empresa = document.getElementById('res-empresa')?.value || '';
+  const pts = DB.plantillasResguardo || [];
+
+  // Filtrar por empresa actual (si hay) o mostrar todas
+  let disponibles = pts.filter(p => !empresa || p.empresa === empresa);
+  if (!disponibles.length) disponibles = pts; // fallback: todas
+
+  sel.innerHTML = '<option value="">— Seleccionar tipo —</option>';
+  if (!disponibles.length) {
+    // Sin plantillas: usar tipos de equipo del catálogo como fallback
+    (DB.catalogos?.tiposEquipo || []).forEach(t => {
+      sel.innerHTML += `<option value="${t}">${t}</option>`;
+    });
+    if (hint) hint.style.display = '';
+  } else {
+    disponibles.forEach(p => {
+      sel.innerHTML += `<option value="${p.nombre}" data-tipo-formato="${p.tipo}">${p.nombre}</option>`;
+    });
+    if (hint) hint.style.display = 'none';
+  }
+}
+
 function res_actualizarCampos() {
-  const tipo = document.getElementById('res-tipo')?.value;
-  const esCelular = tipo === 'Celular';
+  const tipoNombre = document.getElementById('res-tipo')?.value;
+  // Buscar plantilla para saber si es celular
+  const plt = (DB.plantillasResguardo||[]).find(p => p.nombre === tipoNombre);
+  const tipoFormato2 = plt?.tipo || tipoFormato(tipoNombre); // fallback por nombre
+  const esCelular = tipoFormato2 === 'celular';
 
   // Mostrar/ocultar sección celular
   const grupoCel = document.getElementById('grupo-celular');
@@ -2374,7 +2402,6 @@ function res_actualizarCampos() {
     if (el) el.style.display = esCelular ? 'none' : '';
   });
 
-  // Si es celular, cargar líneas disponibles
   if (esCelular) res_cargarLineas();
 }
 
@@ -2397,8 +2424,12 @@ function guardarResguardo() {
   const empleado = document.getElementById('res-empleado').value;
   const serie    = document.getElementById('res-serie').value.trim();
   const fecha    = document.getElementById('res-fecha').value;
-  const tipo     = document.getElementById('res-tipo').value;
-  const esCelular = tipo === 'Celular';
+  const tipoNombre = document.getElementById('res-tipo').value;
+  if (!tipoNombre) { toast('Selecciona el tipo de resguardo', '⚠️'); return; }
+  const pltActual   = (DB.plantillasResguardo||[]).find(p => p.nombre === tipoNombre);
+  const tipoFormato3 = pltActual?.tipo || tipoFormato(tipoNombre);
+  const tipo        = tipoNombre;  // nombre del formato como tipo
+  const esCelular   = tipoFormato3 === 'celular';
 
   if (!empleado) { toast('Busca y selecciona un empleado', '⚠️'); return; }
   if (!fecha)    { toast('Selecciona la fecha de asignación', '⚠️'); return; }
@@ -5012,19 +5043,30 @@ async function descargarResguardo(id) {
   const r = DB.resguardos.find(x => x.id == id);
   if (!r) { toast('Resguardo no encontrado', '⚠️'); return; }
 
-  // Verificar que docx esté disponible
-  if (typeof docx === 'undefined') {
+  // Verificar que docx esté disponible (puede estar en window.docx o directo en window)
+  const docxLib = (typeof docx !== 'undefined' && docx?.Document) ? docx
+                : (typeof Document !== 'undefined' && typeof Packer !== 'undefined') ? window
+                : null;
+  if (!docxLib) {
     toast('Cargando librería...', '⏳');
-    await new Promise(res => setTimeout(res, 1500));
-    if (typeof docx === 'undefined') { toast('Error al cargar librería de documentos', '⚠️'); return; }
+    await new Promise(res => setTimeout(res, 2000));
+    const docxLib2 = (typeof docx !== 'undefined' && docx?.Document) ? docx
+                   : (typeof Document !== 'undefined') ? window : null;
+    if (!docxLib2) { toast('Error al cargar librería de documentos', '⚠️'); return; }
   }
-
+  const _lib = (typeof docx !== 'undefined' && docx?.Document) ? docx : window;
   const {
     Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
     ImageRun, AlignmentType, BorderStyle, WidthType, ShadingType, VerticalAlign
-  } = docx;
+  } = _lib;
 
-  const formato = tipoFormato(r.tipo);
+  // Buscar plantilla configurada para este resguardo
+  const pltRes = obtenerPlantillaParaResguardo(r);
+  // Si hay plantilla, usar su tipo; si no, inferir del nombre
+  const formato = pltRes ? pltRes.tipo : tipoFormato(r.tipo);
+  const empresaDoc = pltRes?.empresaDoc || 'CAR COMERCIALIZADORA S.A DE C.V';
+  const entregaDoc = pltRes?.entrego    || 'SISTEMAS TI';
+  const clausulaDoc = pltRes?.clausula  || null;
 
   // Fecha actual en español
   const meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
@@ -5085,7 +5127,7 @@ async function descargarResguardo(id) {
       shading: { fill:'D9D9D9', type:ShadingType.CLEAR },
       width: { size:9360, type:WidthType.DXA },
       margins: { top:80, bottom:80, left:200, right:200 },
-      children: [new Paragraph({ alignment:AlignmentType.CENTER, children:[txtB('CAR COMERCIALIZADORA S.A DE C.V', 24)] })]
+      children: [new Paragraph({ alignment:AlignmentType.CENTER, children:[txtB(empresaDoc.toUpperCase(), 24)] })]
     }) ]})]
   });
 
@@ -5141,6 +5183,7 @@ async function descargarResguardo(id) {
   }
 
   // ── Cláusula ────────────────────────────────────────────────────
+  const clausulaBase = clausulaDoc ? clausulaDoc.replace('{EMPRESA}', empresaDoc) : null;
   const importeTexto = formato==='dispositivo' && r.costo
     ? `FACULTO A LA EMPRESA A DESCONTAR DE MIS PERCEPCIONES EL IMPORTE DE $${Number(r.costo).toLocaleString('es-MX',{style:'currency',currency:'MXN'})} EN CASO DE EXTRAVÍO O DESCOMPOSTURA POR MAL USO, O MALTRATO.`
     : 'FACULTO A LA EMPRESA A DESCONTAR DE MIS PERCEPCIONES EL IMPORTE TOTAL EN CASO DE EXTRAVÍO O DESCOMPOSTURA POR MAL USO, O MALTRATO.';
@@ -5154,9 +5197,13 @@ async function descargarResguardo(id) {
       children:[new Paragraph({
         alignment:AlignmentType.BOTH, spacing:{before:60,after:60},
         children:[
-          txt('COMPROMETIENDOME A DARLES UN BUEN USO, ADECUADO Y A DEVOLVERLOS CUANDO LA EMPRESA '),
-          txtB('CAR COMERCIALIZADORA S.A DE C.V'),
-          txt(' LO REQUIERA, AL MISMO TIEMPO '+importeTexto),
+          ...(clausulaBase
+            ? [txt(clausulaBase)]
+            : [
+                txt('COMPROMETIENDOME A DARLES UN BUEN USO, ADECUADO Y A DEVOLVERLOS CUANDO LA EMPRESA '),
+                txtB(empresaDoc),
+                txt(' LO REQUIERA, AL MISMO TIEMPO '+importeTexto),
+              ]),
         ]
       })]
     }) ]})]
