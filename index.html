@@ -1352,11 +1352,22 @@
         <div id="grupo-celular" style="display:none;grid-column:1/-1;background:rgba(45,212,191,0.05);border:1px solid rgba(45,212,191,0.2);border-radius:8px;padding:14px">
           <div style="font-size:12px;font-weight:500;color:var(--teal);margin-bottom:12px;text-transform:uppercase;letter-spacing:.6px">📡 Línea telefónica</div>
           <div class="form-grid" style="margin:0">
-            <div class="form-group">
+            <div class="form-group full">
               <label>Línea *</label>
-              <select id="res-linea-id" onchange="res_seleccionarLinea()">
-                <option value="">— Seleccionar línea disponible —</option>
-              </select>
+              <div style="position:relative">
+                <input type="text" id="res-linea-input" placeholder="Busca por número o operadora…"
+                  autocomplete="off" oninput="filtrarLineasAC()" onfocus="filtrarLineasAC()">
+                <input type="hidden" id="res-linea-id">
+                <div id="res-linea-ac" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius-sm);max-height:200px;overflow-y:auto;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,0.5);margin-top:2px"></div>
+              </div>
+              <div id="res-linea-sel" style="display:none;margin-top:6px;padding:8px 12px;background:rgba(45,212,191,0.08);border:1px solid rgba(45,212,191,0.2);border-radius:var(--radius-sm);font-size:13px;display:flex;align-items:center;gap:8px">
+                <span style="font-size:16px">📡</span>
+                <div style="flex:1">
+                  <div id="res-linea-sel-text" style="font-weight:500;font-family:var(--mono)"></div>
+                  <div id="res-linea-sel-sub" style="font-size:11px;color:var(--text3);margin-top:1px"></div>
+                </div>
+                <button type="button" onclick="limpiarLineaAC()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:15px;padding:0 2px">✕</button>
+              </div>
             </div>
             <div class="form-group">
               <label>Número</label>
@@ -1951,6 +1962,7 @@ function openModal(id) {
     limpiarEmpleadoAC();
     limpiarCompraAC();
     res_actualizarCampos();
+    limpiarLineaAC();
   }
   if (id === 'modal-compra') {
     const today = new Date().toISOString().split('T')[0];
@@ -1999,6 +2011,13 @@ function openModal(id) {
 function closeModal(id) {
   document.getElementById(id).classList.remove('open');
 }
+document.addEventListener('click', e => {
+  // Cerrar autocomplete de líneas al hacer click fuera
+  if (!e.target.closest('#res-linea-input') && !e.target.closest('#res-linea-ac')) {
+    const ac = document.getElementById('res-linea-ac');
+    if (ac) ac.style.display = 'none';
+  }
+});
 document.querySelectorAll('.modal-overlay').forEach(m => {
   m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
 });
@@ -2280,6 +2299,66 @@ document.addEventListener('click', e => {
 });
 
 
+
+// ─── AUTOCOMPLETE LÍNEAS ─────────────────────────────────────────
+function filtrarLineasAC() {
+  const input = document.getElementById('res-linea-input');
+  const ac    = document.getElementById('res-linea-ac');
+  if (!input || !ac) return;
+  const q = input.value.toLowerCase();
+  const disponibles = (DB.lineas||[]).filter(l =>
+    l.estado === 'Disponible' &&
+    ((l.numero||'').includes(q) || (l.operadora||'').toLowerCase().includes(q) || (l.plan||'').toLowerCase().includes(q))
+  );
+  if (!disponibles.length) {
+    ac.innerHTML = `<div style="padding:12px 16px;font-size:13px;color:var(--text3)">
+      ${q ? 'Sin resultados para "'+q+'"' : 'Sin líneas disponibles'}
+    </div>`;
+    ac.style.display = '';
+    return;
+  }
+  ac.innerHTML = disponibles.map(l => `
+    <div onclick="seleccionarLineaAC(${l.id})"
+      style="padding:10px 16px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px"
+      onmouseover="this.style.background='rgba(45,212,191,0.08)'"
+      onmouseout="this.style.background='transparent'">
+      <span style="font-size:16px">📡</span>
+      <div>
+        <div style="font-size:13px;font-weight:500;font-family:var(--mono)">${l.numero}</div>
+        <div style="font-size:11px;color:var(--text3)">${l.operadora}${l.plan?' · '+l.plan:''}</div>
+      </div>
+      ${l.costo ? `<span style="margin-left:auto;font-size:11px;color:var(--teal)">${formatMoney(l.costo)}/mes</span>` : ''}
+    </div>`).join('');
+  ac.style.display = '';
+}
+
+function seleccionarLineaAC(id) {
+  const l = (DB.lineas||[]).find(x => x.id == id);
+  if (!l) return;
+  document.getElementById('res-linea-id').value    = l.id;
+  document.getElementById('res-linea-input').style.display = 'none';
+  document.getElementById('res-linea-ac').style.display    = 'none';
+  const sel = document.getElementById('res-linea-sel');
+  sel.style.display = 'flex';
+  document.getElementById('res-linea-sel-text').textContent = l.numero;
+  document.getElementById('res-linea-sel-sub').textContent  = l.operadora + (l.plan?' · '+l.plan:'') + (l.costo?' · '+formatMoney(l.costo)+'/mes':'');
+  // Llenar campos de lectura
+  document.getElementById('res-linea-num').value  = l.numero    || '';
+  document.getElementById('res-linea-op').value   = l.operadora || '';
+  document.getElementById('res-linea-plan').value = l.plan      || '';
+}
+
+function limpiarLineaAC() {
+  document.getElementById('res-linea-id').value           = '';
+  document.getElementById('res-linea-input').value        = '';
+  document.getElementById('res-linea-input').style.display = '';
+  document.getElementById('res-linea-ac').style.display   = 'none';
+  document.getElementById('res-linea-sel').style.display  = 'none';
+  document.getElementById('res-linea-num').value          = '';
+  document.getElementById('res-linea-op').value           = '';
+  document.getElementById('res-linea-plan').value         = '';
+}
+
 // ─── RESGUARDO CELULAR ────────────────────────────────────────────
 function res_actualizarCampos() {
   const tipo = document.getElementById('res-tipo')?.value;
@@ -2300,23 +2379,12 @@ function res_actualizarCampos() {
 }
 
 function res_cargarLineas() {
-  const sel = document.getElementById('res-linea-id');
-  if (!sel) return;
-  const disponibles = (DB.lineas || []).filter(l => l.estado === 'Disponible');
-  sel.innerHTML = '<option value="">— Seleccionar línea disponible —</option>' +
-    disponibles.map(l => `<option value="${l.id}">${l.numero} · ${l.operadora}${l.plan?' · '+l.plan:''}</option>`).join('');
-  if (!disponibles.length) {
-    sel.innerHTML = '<option value="">Sin líneas disponibles</option>';
-  }
+  // Ahora usa autocomplete — solo resetear el campo
+  limpiarLineaAC();
 }
 
 function res_seleccionarLinea() {
-  const sel = document.getElementById('res-linea-id');
-  const id  = sel?.value;
-  const lin = id ? (DB.lineas||[]).find(l => l.id == id) : null;
-  document.getElementById('res-linea-num').value  = lin?.numero    || '';
-  document.getElementById('res-linea-op').value   = lin?.operadora || '';
-  document.getElementById('res-linea-plan').value = lin?.plan      || '';
+  // Manejado por seleccionarLineaAC
 }
 
 function res_toggleEquipoCelular() {
@@ -2327,27 +2395,24 @@ function res_toggleEquipoCelular() {
 
 function guardarResguardo() {
   const empleado = document.getElementById('res-empleado').value;
-  const serie = document.getElementById('res-serie').value.trim();
-  const fecha = document.getElementById('res-fecha').value;
-  if (!empleado) { toast('Busca y selecciona un empleado', '⚠️'); return; }
-  if (!serie) { toast('Ingresa el número de serie', '⚠️'); return; }
-  if (!fecha) { toast('Selecciona la fecha de asignación', '⚠️'); return; }
+  const serie    = document.getElementById('res-serie').value.trim();
+  const fecha    = document.getElementById('res-fecha').value;
+  const tipo     = document.getElementById('res-tipo').value;
+  const esCelular = tipo === 'Celular';
 
-  const compraId = document.getElementById('res-compra-id')?.value || null;
+  if (!empleado) { toast('Busca y selecciona un empleado', '⚠️'); return; }
+  if (!fecha)    { toast('Selecciona la fecha de asignación', '⚠️'); return; }
+  if (!esCelular && !serie) { toast('Ingresa el número de serie', '⚠️'); return; }
+
+  const compraId  = document.getElementById('res-compra-id')?.value || null;
   if (compraId && stockDisponible(compraId) <= 0) {
     toast('Este equipo ya no tiene stock disponible', '⚠️'); return;
   }
 
-  const tipo = document.getElementById('res-tipo').value;
-  const esCelular = tipo === 'Celular';
-  const lineaId   = esCelular ? document.getElementById('res-linea-id').value : null;
-  const conEquipo = esCelular && document.getElementById('res-celular-con-equipo').checked;
+  const lineaId   = esCelular ? document.getElementById('res-linea-id')?.value : null;
+  const conEquipo = esCelular && document.getElementById('res-celular-con-equipo')?.checked;
 
-  // Validar línea si es celular
   if (esCelular && !lineaId) { toast('Selecciona una línea telefónica', '⚠️'); return; }
-
-  // Para celular sin equipo, no requerir serie
-  if (!esCelular && !serie) { toast('Ingresa el número de serie', '⚠️'); return; }
 
   const nuevoRes = {
     id: Date.now(),
