@@ -73,7 +73,7 @@
   .logo-text { font-size: 15px; font-weight: 600; letter-spacing: -0.3px; }
   .logo-sub { font-size: 11px; color: var(--text3); margin-top: 2px; font-family: var(--mono); }
 
-  .sidebar-nav { flex: 1; padding: 12px 0; }
+  .sidebar-nav { flex: 1; padding: 12px 0; overflow-y: auto; overflow-x: hidden; }
   .nav-section { padding: 8px 16px 4px; font-size: 10px; font-weight: 500; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; }
   .nav-item {
     display: flex; align-items: center; gap: 10px;
@@ -303,8 +303,8 @@
 
   /* ── SECTION TABS ── */
   .view { display: none; }
-  .view.active { display: flex; flex-direction: column; min-height: calc(100vh - 56px); }
-  .view.active .content { flex: 1; }
+  .view.active { display: block; }
+  .view.active .content { min-height: calc(100vh - 110px); }
 
   /* ── IMPORT AREA ── */
   .import-zone {
@@ -1048,6 +1048,7 @@
         <button class="btn btn-ghost btn-sm" onclick="descargarPlantillaLineas()">⬇ Plantilla Excel</button>
         <button class="btn btn-ghost btn-sm" onclick="document.getElementById('lin-excel-input').click()">📥 Importar Excel</button>
         <input type="file" id="lin-excel-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="importarLineasExcel(this.files[0])">
+        <button class="btn btn-danger btn-sm" onclick="borrarTodasLineas()">🗑 Borrar todo</button>
         <button class="btn btn-primary" onclick="openModal('modal-linea')">+ Nueva línea</button>
       </div>
     </div>
@@ -1067,7 +1068,7 @@
         </div>
         <div style="overflow-x:auto">
           <table style="width:100%">
-            <thead><tr><th>Número</th><th>Operadora</th><th>ICCID</th><th>Plan</th><th>Costo/mes</th><th>Estado</th><th>Asignada a</th><th></th></tr></thead>
+            <thead><tr><th>Número</th><th>Operadora</th><th>ICCID</th><th>Plan</th><th>Costo/mes</th><th>Plazo</th><th>Vencimiento</th><th>Estado</th><th>Asignada a</th><th></th></tr></thead>
             <tbody id="lineas-tbody"></tbody>
           </table>
         </div>
@@ -1199,6 +1200,22 @@
             <option value="Asignada">Asignada</option>
             <option value="Baja">De baja</option>
           </select>
+        </div>
+        <div class="form-group">
+          <label>Plazo del contrato</label>
+          <select id="lin-plazo">
+            <option value="">Sin plazo definido</option>
+            <option value="6 meses">6 meses</option>
+            <option value="12 meses">12 meses</option>
+            <option value="18 meses">18 meses</option>
+            <option value="24 meses">24 meses</option>
+            <option value="36 meses">36 meses</option>
+            <option value="Indefinido">Indefinido</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Fecha vencimiento contrato</label>
+          <input type="date" id="lin-vencimiento">
         </div>
         <div class="form-group full">
           <label>Notas</label>
@@ -1368,7 +1385,7 @@
             <div class="form-grid" style="margin:0">
               <div class="form-group">
                 <label>Marca del equipo</label>
-                <input type="text" id="res-cel-marca" placeholder="Samsung, Apple…" list="dl-marcas">
+                <input type="text" id="res-cel-marca" placeholder="Samsung, Apple…" list="dl-marcas-cel" autocomplete="off">
               </div>
               <div class="form-group">
                 <label>Modelo</label>
@@ -1815,7 +1832,8 @@ function iniciarListeners() {
     if (snap.exists) {
       DB.catalogos = snap.data();
       if (!DB.catalogos.empresas)     DB.catalogos.empresas     = ['Empresa Principal'];
-      if (!DB.catalogos.centrosCosto) DB.catalogos.centrosCosto = ['CC-001 General'];
+      if (!DB.catalogos.centrosCosto)  DB.catalogos.centrosCosto  = ['CC-001 General'];
+      if (!DB.catalogos.marcasCelular)  DB.catalogos.marcasCelular  = ['Samsung','Apple','Motorola','Huawei','LG','Nokia','Xiaomi','OnePlus','OPPO','Vivo'];
       poblarSelectsCatalogos();
       renderCatalogos();
     }
@@ -1948,11 +1966,12 @@ function openModal(id) {
   if (id === 'modal-linea' && !lin_editId) {
     lin_editId = null;
     document.getElementById('modal-linea-titulo').textContent = 'Nueva línea telefónica';
-    ['lin-numero','lin-operadora','lin-iccid','lin-plan','lin-notas'].forEach(f => {
+    ['lin-numero','lin-operadora','lin-iccid','lin-plan','lin-notas','lin-vencimiento'].forEach(f => {
       const el = document.getElementById(f); if(el) el.value = '';
     });
     const ce = document.getElementById('lin-costo'); if(ce) ce.value = '';
     const se = document.getElementById('lin-estado'); if(se) se.value = 'Disponible';
+    const sp = document.getElementById('lin-plazo'); if(sp) sp.value = '';
   }
   if (id === 'modal-ajuste-almacen') {
     const today = new Date().toISOString().split('T')[0];
@@ -3754,7 +3773,8 @@ const CAT_META = {
   estadosRes:   { label:'Estados de resguardo',   color:'rgba(34,197,94,0.10)',   border:'rgba(34,197,94,0.25)',  text:'var(--green)',  icono:'🔖' },
   areas:        { label:'Áreas / Departamentos',  color:'rgba(167,139,250,0.10)', border:'rgba(167,139,250,0.25)',text:'var(--purple)', icono:'🏢' },
   empresas:     { label:'Empresas',               color:'rgba(249,115,22,0.10)',  border:'rgba(249,115,22,0.28)', text:'#fb923c',       icono:'🏛' },
-  centrosCosto: { label:'Centros de costo',       color:'rgba(236,72,153,0.10)',  border:'rgba(236,72,153,0.28)', text:'#f472b6',       icono:'💲' },
+  centrosCosto:  { label:'Centros de costo',       color:'rgba(236,72,153,0.10)',  border:'rgba(236,72,153,0.28)', text:'#f472b6',       icono:'💲' },
+  marcasCelular: { label:'Marcas de celular',        color:'rgba(45,212,191,0.10)',  border:'rgba(45,212,191,0.25)', text:'var(--teal)',   icono:'📱' },
 };
 
 // ── Render vista catálogos ────────────────────────────────────
@@ -4586,6 +4606,14 @@ function renderLineas() {
     <td class="text-sm" style="font-family:var(--mono);font-size:11px">${l.iccid||'—'}</td>
     <td class="text-sm">${l.plan||'—'}</td>
     <td class="mono">${l.costo ? formatMoney(l.costo)+'/mes' : '—'}</td>
+    <td class="text-sm">${l.plazo||'—'}</td>
+    <td class="text-sm">${l.vencimiento ? (() => {
+      const hoy  = new Date(); hoy.setHours(0,0,0,0);
+      const venc = new Date(l.vencimiento+'T00:00:00');
+      const dias = Math.ceil((venc-hoy)/(1000*60*60*24));
+      const col  = dias < 0 ? 'var(--red)' : dias <= 30 ? 'var(--amber)' : 'var(--green)';
+      return '<span style="color:'+col+';font-weight:500">'+formatFecha(l.vencimiento)+'</span>';
+    })() : '—'}</td>
     <td><span class="badge ${estadoColor[l.estado]||'badge-gray'}">${l.estado||'—'}</span></td>
     <td class="text-sm">${l.empleado||'—'}</td>
     <td><div class="row-actions" style="opacity:1">
@@ -4609,6 +4637,8 @@ function guardarLinea() {
     plan:       document.getElementById('lin-plan').value.trim(),
     costo:      parseFloat(document.getElementById('lin-costo').value) || 0,
     estado:     document.getElementById('lin-estado').value,
+    plazo:      document.getElementById('lin-plazo').value,
+    vencimiento: document.getElementById('lin-vencimiento').value,
     notas:      document.getElementById('lin-notas').value.trim(),
     empleado:   lin_editId ? (DB.lineas.find(l=>l.id==lin_editId)?.empleado||'') : '',
     fecha:      lin_editId ? (DB.lineas.find(l=>l.id==lin_editId)?.fecha||new Date().toISOString().split('T')[0]) : new Date().toISOString().split('T')[0],
@@ -4637,14 +4667,45 @@ function editarLinea(id) {
   document.getElementById('lin-iccid').value     = l.iccid     || '';
   document.getElementById('lin-plan').value      = l.plan      || '';
   document.getElementById('lin-costo').value     = l.costo     || '';
-  document.getElementById('lin-estado').value    = l.estado    || 'Disponible';
-  document.getElementById('lin-notas').value     = l.notas     || '';
+  document.getElementById('lin-estado').value      = l.estado      || 'Disponible';
+  document.getElementById('lin-plazo').value       = l.plazo       || '';
+  document.getElementById('lin-vencimiento').value = l.vencimiento || '';
+  document.getElementById('lin-notas').value       = l.notas       || '';
   openModal('modal-linea');
+}
+
+
+function borrarTodasLineas() {
+  const total     = DB.lineas.length;
+  const asignadas = DB.lineas.filter(l => l.estado === 'Asignada').length;
+  if (!total) { toast('No hay líneas registradas', '⚠️'); return; }
+
+  let msg = `¿Eliminar TODAS las ${total} líneas?`;
+  if (asignadas > 0) msg += `\n\n⚠️ ${asignadas} línea${asignadas>1?'s están':' está'} asignada${asignadas>1?'s':''}. Se liberarán de los resguardos.`;
+  msg += '\n\nEsta acción NO se puede deshacer.';
+
+  if (!confirm(msg)) return;
+  if (!confirm('¿Confirmas que quieres borrar TODO el catálogo de líneas?')) return;
+
+  // Liberar líneas de resguardos
+  DB.resguardos.forEach(r => { if (r.lineaId) { r.lineaId = null; r.lineaNumero = ''; r.lineaOperadora = ''; r.lineaPlan = ''; } });
+  DB.lineas = [];
+  guardarDB();
+  renderLineas();
+  actualizarBadges();
+  toast('Todas las líneas eliminadas', '🗑');
 }
 
 function eliminarLinea(id) {
   const l = DB.lineas.find(x => x.id == id);
-  if (!l || !confirm(`¿Eliminar la línea ${l.numero}?`)) return;
+  if (!l) return;
+  // Verificar si tiene resguardo activo
+  const resActivo = DB.resguardos.find(r => r.lineaId == id && r.estado !== 'Baja');
+  if (resActivo) {
+    toast(`La línea ${l.numero} está asignada a ${resActivo.empleado}. Primero da de baja el resguardo.`, '⚠️');
+    return;
+  }
+  if (!confirm(`¿Eliminar la línea ${l.numero}?`)) return;
   DB.lineas = DB.lineas.filter(x => x.id != id);
   guardarDB();
   renderLineas();
