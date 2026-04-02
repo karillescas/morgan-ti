@@ -144,7 +144,7 @@
   .btn-teal:hover { background: rgba(45,212,191,0.25); }
 
   /* ── CONTENT ── */
-  .content { padding: 28px; }
+  .content { padding: 28px; min-height: calc(100vh - 56px); box-sizing: border-box; }
 
   /* ── STATS ── */
   .stats-grid {
@@ -303,26 +303,7 @@
 
   /* ── SECTION TABS ── */
   .view { display: none; }
-  .view.active {
-    display: flex;
-    flex-direction: column;
-    height: calc(100vh - 56px);
-    overflow: hidden;
-  }
-  .view.active .content {
-    flex: 1;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-  }
-  .view.active .content .table-card:last-child {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-  }
-  .view.active .content .table-card:last-child table {
-    flex: 1;
-  }
+  .view.active { display: block; }
 
   /* ── IMPORT AREA ── */
   .import-zone {
@@ -822,8 +803,6 @@
       </div>
     </div>
   </div>
-
-</main>
 
 <!-- Modal: Armar PC -->
 <div id="modal-armar" class="modal-overlay">
