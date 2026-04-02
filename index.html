@@ -303,8 +303,26 @@
 
   /* ── SECTION TABS ── */
   .view { display: none; }
-  .view.active { display: block; }
-  .view.active .content { min-height: calc(100vh - 110px); }
+  .view.active {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 56px);
+    overflow: hidden;
+  }
+  .view.active .content {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+  .view.active .content .table-card:last-child {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  .view.active .content .table-card:last-child table {
+    flex: 1;
+  }
 
   /* ── IMPORT AREA ── */
   .import-zone {
