@@ -567,7 +567,7 @@
         <div class="topbar-title">Resguardos de equipos</div>
       </div>
       <button class="btn btn-ghost btn-sm" onclick="openModal('modal-import-resguardos')">⬆ Importar Excel</button>
-      <button class="btn btn-primary" onclick="openModal('modal-resguardo')">+ Nuevo resguardo</button>
+      <button class="btn btn-primary" onclick="abrirSelectorTipo()">+ Nuevo resguardo</button>
     </div>
     <div class="content">
       <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:20px">
@@ -1285,6 +1285,28 @@
 </div>
 
 <!-- Modal: Nuevo Resguardo -->
+<!-- Modal: Seleccionar tipo de resguardo -->
+<div id="modal-tipo-resguardo" class="modal-overlay">
+  <div class="modal" style="width:580px">
+    <div class="modal-header">
+      <span style="font-size:18px">📋</span>
+      <div class="modal-title">¿Qué tipo de resguardo?</div>
+      <button class="modal-close" onclick="closeModal('modal-tipo-resguardo')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="tipo-res-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px"></div>
+      <div id="tipo-res-empty" style="display:none;text-align:center;padding:32px;color:var(--text3)">
+        <div style="font-size:32px;margin-bottom:12px;opacity:.4">📋</div>
+        <div style="font-size:14px;color:var(--text2);margin-bottom:6px">Sin formatos configurados</div>
+        <div style="font-size:12px">Ve a <strong>Formatos resguardo</strong> y crea al menos uno para poder generar resguardos.</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-tipo-resguardo')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <div id="modal-resguardo" class="modal-overlay">
   <div class="modal">
     <div class="modal-header">
@@ -1293,6 +1315,16 @@
       <button class="modal-close" onclick="closeModal('modal-resguardo')">✕</button>
     </div>
     <div class="modal-body">
+      <!-- Badge del tipo seleccionado -->
+      <div id="res-tipo-badge" style="margin-bottom:14px;padding:10px 14px;background:rgba(79,142,247,0.08);border:1px solid rgba(79,142,247,0.2);border-radius:8px;display:flex;align-items:center;gap:10px">
+        <span style="font-size:18px" id="res-tipo-icono">📋</span>
+        <div>
+          <div style="font-size:13px;font-weight:600" id="res-tipo-nombre-badge">—</div>
+          <div style="font-size:11px;color:var(--text3)" id="res-tipo-empresa-badge">—</div>
+        </div>
+        <button onclick="closeModal('modal-resguardo');abrirSelectorTipo()" style="margin-left:auto;background:none;border:none;color:var(--text3);cursor:pointer;font-size:12px;padding:4px 8px;border-radius:4px" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text3)'">Cambiar ↩</button>
+      </div>
+      <input type="hidden" id="res-tipo">
       <div class="form-grid">
         <div class="form-group full">
           <label>Empleado *</label>
@@ -1306,25 +1338,21 @@
             <button type="button" onclick="limpiarEmpleadoAC()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:15px;padding:0 2px" title="Cambiar">✕</button>
           </div>
         </div>
-        <div class="form-group full" id="grupo-desde-compra">
-          <label>Vincular a compra <span style="color:var(--text3);font-weight:400">(opcional — solo equipos con stock)</span></label>
+        <div class="form-group full" id="grupo-desde-almacen">
+          <label>Equipo del almacén <span style="color:var(--text3);font-weight:400">(opcional — equipos disponibles sin resguardo)</span></label>
           <div style="position:relative">
-            <input type="text" id="res-compra-input" placeholder="Busca por concepto, marca o modelo…" autocomplete="off" oninput="filtrarComprasAC()" onfocus="filtrarComprasAC()">
-            <input type="hidden" id="res-compra-id">
-            <div id="res-compra-ac" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius-sm);max-height:240px;overflow-y:auto;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,0.5);margin-top:2px"></div>
+            <input type="text" id="res-almacen-input" placeholder="Busca por descripción, marca o modelo…" autocomplete="off" oninput="filtrarAlmacenResAC()" onfocus="filtrarAlmacenResAC()">
+            <input type="hidden" id="res-almacen-id">
+            <div id="res-almacen-ac" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius-sm);max-height:240px;overflow-y:auto;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,0.5);margin-top:2px"></div>
           </div>
-          <div id="res-compra-sel" style="display:none;margin-top:6px;padding:10px 14px;background:rgba(45,212,191,0.08);border:1px solid rgba(45,212,191,0.2);border-radius:var(--radius-sm);font-size:13px">
+          <div id="res-almacen-sel" style="display:none;margin-top:6px;padding:10px 14px;background:rgba(45,212,191,0.08);border:1px solid rgba(45,212,191,0.2);border-radius:var(--radius-sm);font-size:13px">
             <div style="display:flex;align-items:center;gap:8px">
-              <span style="font-size:16px">🛒</span>
+              <span style="font-size:16px">📦</span>
               <div style="flex:1">
-                <div id="res-compra-sel-text" style="font-weight:500"></div>
-                <div id="res-compra-sel-sub" style="font-size:11px;color:var(--text3);margin-top:2px"></div>
+                <div id="res-almacen-sel-text" style="font-weight:500"></div>
+                <div id="res-almacen-sel-sub" style="font-size:11px;color:var(--text3);margin-top:2px"></div>
               </div>
-              <button type="button" onclick="limpiarCompraAC()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:15px">✕</button>
-            </div>
-            <div style="margin-top:8px;display:flex;align-items:center;gap:6px">
-              <span style="font-size:11px;color:var(--text3)">Stock disponible:</span>
-              <span id="res-stock-badge" class="badge badge-teal"></span>
+              <button type="button" onclick="limpiarAlmacenResAC()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:15px">✕</button>
             </div>
           </div>
         </div>
@@ -1943,6 +1971,7 @@ function openModal(id) {
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('res-fecha').value = today;
     // Limpiar campos
+    document.getElementById('res-almacen-input').value = '';
     ['res-tipo','res-modalidad','res-marca','res-modelo','res-serie','res-obs'].forEach(f => {
       const el = document.getElementById(f);
       if (el) { el.tagName === 'SELECT' ? el.selectedIndex = 0 : (el.value = ''); }
@@ -2013,6 +2042,10 @@ document.addEventListener('click', e => {
   // Cerrar autocomplete de líneas al hacer click fuera
   if (!e.target.closest('#res-linea-input') && !e.target.closest('#res-linea-ac')) {
     const ac = document.getElementById('res-linea-ac');
+    if (ac) ac.style.display = 'none';
+  }
+  if (!e.target.closest('#res-almacen-input') && !e.target.closest('#res-almacen-ac')) {
+    const ac = document.getElementById('res-almacen-ac');
     if (ac) ac.style.display = 'none';
   }
 });
@@ -2420,26 +2453,159 @@ function res_toggleEquipoCelular() {
   if (grp) grp.style.display = checked ? '' : 'none';
 }
 
+
+// ─── SELECTOR DE TIPO DE RESGUARDO ───────────────────────────────
+function abrirSelectorTipo() {
+  const pts = DB.plantillasResguardo || [];
+  const grid = document.getElementById('tipo-res-grid');
+  const empty = document.getElementById('tipo-res-empty');
+  if (!grid) return;
+
+  if (!pts.length) {
+    grid.style.display = 'none';
+    if (empty) empty.style.display = '';
+    openModal('modal-tipo-resguardo');
+    return;
+  }
+  grid.style.display = '';
+  if (empty) empty.style.display = 'none';
+
+  const iconos = { computo:'🖥', celular:'📱', dispositivo:'📟' };
+  grid.innerHTML = pts.map(p => `
+    <div onclick="seleccionarTipoResguardo('${p.nombre.replace(/'/g,"\\'")}','${p.empresa||''}','${p.tipo||'computo'}')"
+      style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:16px;cursor:pointer;transition:all .15s;text-align:center"
+      onmouseover="this.style.borderColor='rgba(79,142,247,0.4)';this.style.background='rgba(79,142,247,0.05)'"
+      onmouseout="this.style.borderColor='var(--border)';this.style.background='var(--bg3)'">
+      <div style="font-size:28px;margin-bottom:8px">${iconos[p.tipo]||'📋'}</div>
+      <div style="font-size:14px;font-weight:600;margin-bottom:4px">${p.nombre}</div>
+      <div style="font-size:11px;color:var(--text3)">${p.empresa||'Todas las empresas'}</div>
+    </div>`).join('');
+
+  openModal('modal-tipo-resguardo');
+}
+
+function seleccionarTipoResguardo(nombre, empresa, tipoFormato4) {
+  closeModal('modal-tipo-resguardo');
+  // Resetear modal
+  limpiarEmpleadoAC();
+  limpiarAlmacenResAC();
+  limpiarLineaAC();
+  ['res-modalidad','res-marca','res-modelo','res-serie','res-obs'].forEach(f => {
+    const el = document.getElementById(f);
+    if (el) { el.tagName === 'SELECT' ? el.selectedIndex = 0 : (el.value = ''); }
+  });
+  document.getElementById('res-inventario').value = '';
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('res-fecha').value = today;
+  document.getElementById('grupo-arrendamiento').style.display = 'none';
+  const selEmp = document.getElementById('res-empresa');
+  const selCen = document.getElementById('res-centro');
+  if (selEmp && selEmp.options.length) selEmp.selectedIndex = 0;
+  if (selCen && selCen.options.length) selCen.selectedIndex = 0;
+
+  // Poner tipo seleccionado
+  document.getElementById('res-tipo').value = nombre;
+
+  // Actualizar badge
+  const iconos = { computo:'🖥', celular:'📱', dispositivo:'📟' };
+  document.getElementById('res-tipo-icono').textContent  = iconos[tipoFormato4] || '📋';
+  document.getElementById('res-tipo-nombre-badge').textContent  = nombre;
+  document.getElementById('res-tipo-empresa-badge').textContent = empresa || 'Todas las empresas';
+
+  // Actualizar campos según tipo
+  res_actualizarCampos();
+
+  // Mostrar/ocultar grupo almacén según tipo (no para celular)
+  const grupoAlm = document.getElementById('grupo-desde-almacen');
+  if (grupoAlm) grupoAlm.style.display = tipoFormato4 === 'celular' ? 'none' : '';
+
+  openModal('modal-resguardo');
+}
+
+// ─── AUTOCOMPLETE ALMACÉN EN RESGUARDO ────────────────────────────
+function filtrarAlmacenResAC() {
+  const input = document.getElementById('res-almacen-input');
+  const ac    = document.getElementById('res-almacen-ac');
+  if (!input || !ac) return;
+  const q = input.value.toLowerCase();
+
+  // Equipos del almacén disponibles (stock > 0 y sin resguardo activo)
+  const idsConResguardo = new Set(
+    DB.resguardos.filter(r => r.almacenId && r.estado !== 'Baja').map(r => String(r.almacenId))
+  );
+  const disponibles = (DB.almacen||[]).filter(a =>
+    alm_stockDisp(a) > 0 &&
+    !idsConResguardo.has(String(a.id)) &&
+    (a.tipo === 'Equipo') &&
+    ((a.desc||'').toLowerCase().includes(q) || (a.marca||'').toLowerCase().includes(q))
+  );
+
+  if (!disponibles.length) {
+    ac.innerHTML = `<div style="padding:12px 16px;font-size:13px;color:var(--text3)">
+      ${q ? 'Sin resultados para "'+q+'"' : 'Sin equipos disponibles en almacén'}
+    </div>`;
+    ac.style.display = '';
+    return;
+  }
+  ac.innerHTML = disponibles.map(a => `
+    <div onclick="seleccionarAlmacenResAC(${a.id})"
+      style="padding:10px 16px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px"
+      onmouseover="this.style.background='rgba(45,212,191,0.08)'"
+      onmouseout="this.style.background='transparent'">
+      <span style="font-size:16px">📦</span>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:500">${a.desc}</div>
+        <div style="font-size:11px;color:var(--text3)">${a.marca||''}${a.marca&&a.tipo?' · ':''}${a.tipo} · Disp: ${alm_stockDisp(a)}</div>
+      </div>
+      ${a.costo ? `<span style="font-size:11px;color:var(--teal)">${formatMoney(a.costo)}</span>` : ''}
+    </div>`).join('');
+  ac.style.display = '';
+}
+
+function seleccionarAlmacenResAC(id) {
+  const a = (DB.almacen||[]).find(x => x.id == id);
+  if (!a) return;
+  document.getElementById('res-almacen-id').value = a.id;
+  document.getElementById('res-almacen-input').style.display = 'none';
+  document.getElementById('res-almacen-ac').style.display    = 'none';
+  const sel = document.getElementById('res-almacen-sel');
+  sel.style.display = 'flex';
+  document.getElementById('res-almacen-sel-text').textContent = a.desc;
+  document.getElementById('res-almacen-sel-sub').textContent  = (a.marca||'') + (a.marca?' · ':'') + (a.tipo||'');
+  // Prellenar marca/modelo si están vacíos
+  const m = document.getElementById('res-marca');
+  const mo = document.getElementById('res-modelo');
+  if (m && !m.value)  m.value  = a.marca || '';
+  if (mo && !mo.value) mo.value = a.desc  || '';
+}
+
+function limpiarAlmacenResAC() {
+  const inp = document.getElementById('res-almacen-input');
+  const id  = document.getElementById('res-almacen-id');
+  const ac  = document.getElementById('res-almacen-ac');
+  const sel = document.getElementById('res-almacen-sel');
+  if (inp) { inp.value = ''; inp.style.display = ''; }
+  if (id)  id.value = '';
+  if (ac)  ac.style.display = 'none';
+  if (sel) sel.style.display = 'none';
+}
+
 function guardarResguardo() {
-  const empleado = document.getElementById('res-empleado').value;
-  const serie    = document.getElementById('res-serie').value.trim();
-  const fecha    = document.getElementById('res-fecha').value;
+  const empleado   = document.getElementById('res-empleado').value;
+  const serie      = document.getElementById('res-serie').value.trim();
+  const fecha      = document.getElementById('res-fecha').value;
   const tipoNombre = document.getElementById('res-tipo').value;
+
   if (!tipoNombre) { toast('Selecciona el tipo de resguardo', '⚠️'); return; }
-  const pltActual   = (DB.plantillasResguardo||[]).find(p => p.nombre === tipoNombre);
+  const pltActual    = (DB.plantillasResguardo||[]).find(p => p.nombre === tipoNombre);
   const tipoFormato3 = pltActual?.tipo || tipoFormato(tipoNombre);
-  const tipo        = tipoNombre;  // nombre del formato como tipo
-  const esCelular   = tipoFormato3 === 'celular';
+  const esCelular    = tipoFormato3 === 'celular';
 
   if (!empleado) { toast('Busca y selecciona un empleado', '⚠️'); return; }
   if (!fecha)    { toast('Selecciona la fecha de asignación', '⚠️'); return; }
   if (!esCelular && !serie) { toast('Ingresa el número de serie', '⚠️'); return; }
 
-  const compraId  = document.getElementById('res-compra-id')?.value || null;
-  if (compraId && stockDisponible(compraId) <= 0) {
-    toast('Este equipo ya no tiene stock disponible', '⚠️'); return;
-  }
-
+  const almacenId = document.getElementById('res-almacen-id')?.value || null;
   const lineaId   = esCelular ? document.getElementById('res-linea-id')?.value : null;
   const conEquipo = esCelular && document.getElementById('res-celular-con-equipo')?.checked;
 
@@ -2448,8 +2614,8 @@ function guardarResguardo() {
   const nuevoRes = {
     id: Date.now(),
     empleado,
-    compraId: compraId || null,
-    tipo,
+    almacenId:        almacenId || null,
+    tipo:             tipoNombre,
     modalidad:        document.getElementById('res-modalidad').value,
     marca:            esCelular && conEquipo ? document.getElementById('res-cel-marca').value.trim() : document.getElementById('res-marca').value.trim(),
     modelo:           esCelular && conEquipo ? document.getElementById('res-cel-modelo').value.trim() : document.getElementById('res-modelo').value.trim(),
@@ -2462,7 +2628,6 @@ function guardarResguardo() {
     empresa:          document.getElementById('res-empresa').value,
     centroCosto:      document.getElementById('res-centro').value,
     obs:              document.getElementById('res-obs').value.trim(),
-    // Datos de línea (solo celular)
     lineaId:          lineaId || null,
     lineaNumero:      esCelular ? document.getElementById('res-linea-num').value : '',
     lineaOperadora:   esCelular ? document.getElementById('res-linea-op').value  : '',
@@ -2477,12 +2642,17 @@ function guardarResguardo() {
     const lin = DB.lineas.find(l => l.id == lineaId);
     if (lin) { lin.estado = 'Asignada'; lin.empleado = empleado; }
   }
+  // Marcar item del almacén como usado (stock +1 usado)
+  if (almacenId) {
+    const item = DB.almacen.find(a => a.id == almacenId);
+    if (item) item.stockUsado = (item.stockUsado || 0) + 1;
+  }
 
   guardarDB();
-  limpiarCompraAC();
+  limpiarAlmacenResAC();
   closeModal('modal-resguardo');
   renderResguardos();
-  renderCompras();
+  renderAlmacen();
   renderLineas();
   actualizarBadges();
   toast('Resguardo guardado correctamente');
@@ -4171,12 +4341,18 @@ function renderEquiposCat() {
 // ─── ELIMINAR ────────────────────────────────────────────────────
 function eliminar(modulo, id, renderFn) {
   if (!confirm('¿Eliminar este registro?')) return;
-  // Si es un resguardo de celular, liberar la línea
+  // Al eliminar resguardo: liberar línea, devolver item al almacén
   if (modulo === 'resguardos') {
     const res = DB.resguardos.find(x => x.id === id);
+    // 1. Liberar línea
     if (res?.lineaId) {
       const lin = DB.lineas.find(l => l.id == res.lineaId);
       if (lin) { lin.estado = 'Disponible'; lin.empleado = ''; }
+    }
+    // 2. Devolver item al almacén
+    if (res?.almacenId) {
+      const item = DB.almacen.find(a => a.id == res.almacenId);
+      if (item) item.stockUsado = Math.max(0, (item.stockUsado||0) - 1);
     }
   }
   DB[modulo] = DB[modulo].filter(x => x.id !== id);
