@@ -1311,20 +1311,14 @@
   <div class="modal">
     <div class="modal-header">
       <span style="font-size:18px">🖥</span>
-      <div class="modal-title">Nuevo resguardo</div>
+      <div class="modal-title" id="modal-res-titulo">Nuevo resguardo</div>
       <button class="modal-close" onclick="closeModal('modal-resguardo')">✕</button>
     </div>
     <div class="modal-body">
-      <!-- Badge del tipo seleccionado -->
-      <div id="res-tipo-badge" style="margin-bottom:14px;padding:10px 14px;background:rgba(79,142,247,0.08);border:1px solid rgba(79,142,247,0.2);border-radius:8px;display:flex;align-items:center;gap:10px">
-        <span style="font-size:18px" id="res-tipo-icono">📋</span>
-        <div>
-          <div style="font-size:13px;font-weight:600" id="res-tipo-nombre-badge">—</div>
-          <div style="font-size:11px;color:var(--text3)" id="res-tipo-empresa-badge">—</div>
-        </div>
-        <button onclick="closeModal('modal-resguardo');abrirSelectorTipo()" style="margin-left:auto;background:none;border:none;color:var(--text3);cursor:pointer;font-size:12px;padding:4px 8px;border-radius:4px" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text3)'">Cambiar ↩</button>
-      </div>
+      <!-- Tipo de resguardo (oculto — se establece desde el selector previo) -->
       <input type="hidden" id="res-tipo">
+      <input type="hidden" id="res-edit-id">
+      <input type="hidden" id="res-tipo-icono-val">
       <div class="form-grid">
         <div class="form-group full">
           <label>Empleado *</label>
@@ -1865,7 +1859,7 @@ function iniciarListeners() {
   colecciones.forEach(col => {
     const unsub = db.collection(col).onSnapshot(snap => {
       DB[col] = snap.docs.map(d => d.data());
-      // Re-renderizar la vista activa
+      normalizarIds(col);
       refrescarVistaActiva();
       actualizarBadges();
     });
@@ -1889,6 +1883,16 @@ function iniciarListeners() {
     if (snap.exists) DB.plantillas = snap.data().lista || [];
   });
   _dbListeners.push(unsubPlt);
+}
+
+// Garantizar que los IDs de resguardos sean numéricos al cargar
+function normalizarIds(col) {
+  DB[col] = (DB[col]||[]).map(item => {
+    if (item.id && typeof item.id === 'string' && !isNaN(item.id)) {
+      item.id = parseFloat(item.id);
+    }
+    return item;
+  });
 }
 
 function refrescarVistaActiva() {
@@ -2392,6 +2396,8 @@ function limpiarLineaAC() {
 // ─── RESGUARDO CELULAR ────────────────────────────────────────────
 
 function res_poblarTipos() {
+  // El tipo se establece desde el selector previo, no hay select en el form
+  return;
   const sel   = document.getElementById('res-tipo');
   const hint  = document.getElementById('res-tipo-hint');
   if (!sel) return;
@@ -2514,9 +2520,7 @@ function seleccionarTipoResguardo(nombre, empresa, tipoFormato4) {
 
   // Actualizar badge
   const iconos = { computo:'🖥', celular:'📱', dispositivo:'📟' };
-  document.getElementById('res-tipo-icono').textContent  = iconos[tipoFormato4] || '📋';
-  document.getElementById('res-tipo-nombre-badge').textContent  = nombre;
-  document.getElementById('res-tipo-empresa-badge').textContent = empresa || 'Todas las empresas';
+  // Solo guardamos en el hidden, ya no hay badge visible
 
   // Actualizar campos según tipo
   res_actualizarCampos();
@@ -2596,6 +2600,99 @@ function limpiarAlmacenResAC() {
   if (sel) sel.style.display = 'none';
 }
 
+
+// ─── EDITAR RESGUARDO ─────────────────────────────────────────────
+function editarResguardo(id) {
+  const r = DB.resguardos.find(x => x.id == id);
+  if (!r) return;
+
+  // Encontrar la plantilla del tipo
+  const plt = (DB.plantillasResguardo||[]).find(p => p.nombre === r.tipo);
+  const tipoFmt = plt?.tipo || tipoFormato(r.tipo);
+
+  // Abrir con el tipo ya seleccionado (salta el selector)
+  seleccionarTipoResguardo(r.tipo, r.empresa || '', tipoFmt);
+
+  // Esperar a que el modal abra y luego rellenar campos
+  setTimeout(() => {
+    // Marcar como edición
+    document.getElementById('res-edit-id').value = String(r.id);
+    document.getElementById('modal-res-titulo').textContent = 'Editar resguardo';
+
+    // Empleado
+    document.getElementById('res-empleado').value = r.empleado || '';
+    const selText = document.getElementById('res-empleado-sel-text');
+    const selDiv  = document.getElementById('res-empleado-sel');
+    const inp     = document.getElementById('res-empleado-input');
+    if (selText) selText.innerHTML = `<strong>${r.empleado}</strong>`;
+    if (selDiv)  selDiv.style.display = 'flex';
+    if (inp)     inp.style.display = 'none';
+
+    // Campos básicos
+    ['modalidad','marca','modelo','serie','inventario','fecha','estado','obs'].forEach(campo => {
+      const el = document.getElementById('res-' + campo);
+      if (el && r[campo] !== undefined) el.value = r[campo];
+    });
+
+    // Empresa y centro de costo
+    const selEmp = document.getElementById('res-empresa');
+    const selCen = document.getElementById('res-centro');
+    if (selEmp && r.empresa) {
+      for (let i=0; i<selEmp.options.length; i++) {
+        if (selEmp.options[i].value === r.empresa) { selEmp.selectedIndex = i; break; }
+      }
+    }
+    if (selCen && r.centroCosto) {
+      for (let i=0; i<selCen.options.length; i++) {
+        if (selCen.options[i].value === r.centroCosto) { selCen.selectedIndex = i; break; }
+      }
+    }
+
+    // Fin de arrendamiento
+    if (r.finArrendamiento) {
+      document.getElementById('res-fin-arr').value = r.finArrendamiento;
+      document.getElementById('grupo-arrendamiento').style.display = '';
+    }
+
+    // Almacén
+    if (r.almacenId) {
+      const item = DB.almacen.find(a => a.id == r.almacenId);
+      if (item) {
+        document.getElementById('res-almacen-id').value = r.almacenId;
+        document.getElementById('res-almacen-input').style.display = 'none';
+        const sel = document.getElementById('res-almacen-sel');
+        if (sel) sel.style.display = 'flex';
+        const st = document.getElementById('res-almacen-sel-text');
+        const ss = document.getElementById('res-almacen-sel-sub');
+        if (st) st.textContent = item.desc;
+        if (ss) ss.textContent = (item.marca||'') + (item.marca?' · ':'') + (item.tipo||'');
+      }
+    }
+
+    // Línea (si es celular)
+    if (tipoFmt === 'celular' && r.lineaId) {
+      const lin = DB.lineas.find(l => l.id == r.lineaId);
+      if (lin) {
+        seleccionarLineaAC(lin.id);
+      }
+      // Toggle equipo
+      const chk = document.getElementById('res-celular-con-equipo');
+      if (chk) {
+        chk.checked = r.conEquipo || false;
+        res_toggleEquipoCelular();
+      }
+      // Datos del equipo celular
+      if (r.conEquipo) {
+        ['res-cel-marca','res-cel-modelo','res-cel-imei','res-cel-color'].forEach(campo => {
+          const key = campo.replace('res-cel-','');
+          const el  = document.getElementById(campo);
+          if (el) el.value = r[key === 'imei' ? 'serie' : key] || '';
+        });
+      }
+    }
+  }, 100);
+}
+
 function guardarResguardo() {
   const empleado   = document.getElementById('res-empleado').value;
   const serie      = document.getElementById('res-serie').value.trim();
@@ -2641,7 +2738,30 @@ function guardarResguardo() {
     conEquipo:        esCelular ? conEquipo : false,
   };
 
-  DB.resguardos.push(nuevoRes);
+  const editId = document.getElementById('res-edit-id')?.value;
+  if (editId) {
+    // EDICIÓN: reemplazar el resguardo existente
+    const idx = DB.resguardos.findIndex(x => String(x.id) === String(editId));
+    nuevoRes.id = parseFloat(editId); // mantener ID original
+    if (idx >= 0) {
+      // Liberar recursos del resguardo anterior si cambiaron
+      const viejo = DB.resguardos[idx];
+      if (viejo.lineaId && viejo.lineaId !== nuevoRes.lineaId) {
+        const linVieja = DB.lineas.find(l => l.id == viejo.lineaId);
+        if (linVieja) { linVieja.estado = 'Disponible'; linVieja.empleado = ''; }
+      }
+      if (viejo.almacenId && viejo.almacenId !== nuevoRes.almacenId) {
+        const itmViejo = DB.almacen.find(a => a.id == viejo.almacenId);
+        if (itmViejo) itmViejo.stockUsado = Math.max(0, (itmViejo.stockUsado||0) - 1);
+      }
+      DB.resguardos[idx] = nuevoRes;
+    } else {
+      DB.resguardos.push(nuevoRes);
+    }
+  } else {
+    // NUEVO
+    DB.resguardos.push(nuevoRes);
+  }
 
   // Marcar línea como asignada
   if (lineaId) {
@@ -2661,6 +2781,8 @@ function guardarResguardo() {
   renderAlmacen();
   renderLineas();
   actualizarBadges();
+  document.getElementById('res-edit-id').value = '';
+  document.getElementById('modal-res-titulo').textContent = 'Nuevo resguardo';
   toast('Resguardo guardado correctamente');
 }
 
@@ -2720,6 +2842,7 @@ function renderResguardos() {
       </div></td>
       <td>${badgeEstado(r.estado)}</td>
       <td><div class="row-actions" style="opacity:1">
+        <button class="btn btn-ghost btn-sm" onclick="editarResguardo(${r.id})">✏</button>
         <button class="btn btn-ghost btn-sm" onclick="descargarResguardo(${r.id})" title="Descargar hoja de resguardo">📄 Hoja</button>
         <button class="icon-btn del" onclick="eliminar('resguardos',${r.id},'renderResguardos')">🗑</button>
       </div></td>
@@ -4350,7 +4473,7 @@ async function eliminar(modulo, id, renderFn) {
 
   // Al eliminar resguardo: liberar línea y devolver al almacén
   if (modulo === 'resguardos') {
-    const res = DB.resguardos.find(x => x.id === id);
+    const res = DB.resguardos.find(x => String(x.id) === String(id));
     if (res?.lineaId) {
       const lin = DB.lineas.find(l => l.id == res.lineaId);
       if (lin) {
@@ -4368,17 +4491,27 @@ async function eliminar(modulo, id, renderFn) {
     }
   }
 
-  // Borrar el documento en Firestore PRIMERO
+  // Borrar en Firestore — intentar con el ID como número Y como string
   try {
-    await db.collection(modulo).doc(String(id)).delete();
+    const docRef = db.collection(modulo).doc(String(id));
+    await docRef.delete();
+    // Verificar que se borró
+    const check = await docRef.get();
+    if (check.exists) {
+      // Intentar por si el doc tiene ID diferente formato
+      const snap = await db.collection(modulo).where('id', '==', id).get();
+      const batch = db.batch();
+      snap.docs.forEach(d => batch.delete(d.ref));
+      await batch.commit();
+    }
   } catch(e) {
     console.error('Error borrando en Firestore:', e);
     toast('Error al eliminar: ' + e.message, '⚠️');
     return;
   }
 
-  // Luego actualizar el array local
-  DB[modulo] = DB[modulo].filter(x => x.id !== id);
+  // Actualizar array local con comparación flexible
+  DB[modulo] = DB[modulo].filter(x => String(x.id) !== String(id));
   window[renderFn]();
   actualizarBadges();
   toast('Registro eliminado ✓', '🗑');
