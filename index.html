@@ -2337,8 +2337,13 @@ function filtrarLineasAC() {
   const ac    = document.getElementById('res-linea-ac');
   if (!input || !ac) return;
   const q = input.value.toLowerCase();
+  // Excluir líneas que ya tienen resguardo activo
+  const lineasEnUso = new Set(
+    (DB.resguardos||[]).filter(r => r.lineaId && r.estado !== 'Baja').map(r => String(r.lineaId))
+  );
   const disponibles = (DB.lineas||[]).filter(l =>
     l.estado === 'Disponible' &&
+    !lineasEnUso.has(String(l.id)) &&
     ((l.numero||'').includes(q) || (l.operadora||'').toLowerCase().includes(q) || (l.plan||'').toLowerCase().includes(q))
   );
   if (!disponibles.length) {
@@ -2465,6 +2470,13 @@ function abrirSelectorTipo() {
     grid.style.display = 'none';
     if (empty) empty.style.display = '';
     openModal('modal-tipo-resguardo');
+    return;
+  }
+
+  // Si solo hay 1 formato, ir directo sin preguntar
+  if (pts.length === 1) {
+    const p = pts[0];
+    seleccionarTipoResguardo(p.nombre, p.empresa||'', p.tipo||'computo');
     return;
   }
   grid.style.display = '';
