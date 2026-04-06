@@ -6,7 +6,7 @@
 <title>Morgan TI — Gestión de Tecnologías</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://unpkg.com/docx@8.5.0/build/index.js"></script>
+<script src="https://unpkg.com/docx@7.8.2/build/index.js"></script>
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
@@ -5043,22 +5043,18 @@ async function descargarResguardo(id) {
   const r = DB.resguardos.find(x => x.id == id);
   if (!r) { toast('Resguardo no encontrado', '⚠️'); return; }
 
-  // Verificar que docx esté disponible (puede estar en window.docx o directo en window)
-  const docxLib = (typeof docx !== 'undefined' && docx?.Document) ? docx
-                : (typeof Document !== 'undefined' && typeof Packer !== 'undefined') ? window
-                : null;
-  if (!docxLib) {
+  // Verificar que docx@7.8.2 esté disponible en window.docx
+  if (typeof docx === 'undefined' || !docx.Packer) {
     toast('Cargando librería...', '⏳');
-    await new Promise(res => setTimeout(res, 2000));
-    const docxLib2 = (typeof docx !== 'undefined' && docx?.Document) ? docx
-                   : (typeof Document !== 'undefined') ? window : null;
-    if (!docxLib2) { toast('Error al cargar librería de documentos', '⚠️'); return; }
+    await new Promise(res => setTimeout(res, 2500));
+    if (typeof docx === 'undefined' || !docx.Packer) {
+      toast('Error: recarga la página e intenta de nuevo', '⚠️'); return;
+    }
   }
-  const _lib = (typeof docx !== 'undefined' && docx?.Document) ? docx : window;
   const {
     Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
     ImageRun, AlignmentType, BorderStyle, WidthType, ShadingType, VerticalAlign
-  } = _lib;
+  } = docx;
 
   // Buscar plantilla configurada para este resguardo
   const pltRes = obtenerPlantillaParaResguardo(r);
