@@ -1228,58 +1228,85 @@
 </div>
 
 <!-- Modal: Formato de Resguardo -->
-<div id="modal-plantilla-res" class="modal-overlay">
-  <div class="modal" style="width:620px">
-    <div class="modal-header">
+<div id="modal-plantilla-res" class="modal-overlay" style="align-items:stretch;padding:0">
+  <div style="width:100%;height:100vh;display:flex;flex-direction:column;background:var(--bg)">
+
+    <!-- Header fijo -->
+    <div style="display:flex;align-items:center;gap:12px;padding:12px 20px;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0">
       <span style="font-size:18px">📋</span>
-      <div class="modal-title" id="modal-plt-res-titulo">Nuevo formato de resguardo</div>
-      <button class="modal-close" onclick="closeModal('modal-plantilla-res')">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="form-grid" style="margin-bottom:16px">
-        <div class="form-group">
-          <label>Nombre del formato *</label>
-          <input type="text" id="plt-res-nombre" placeholder="Ej. Resguardo Laptop">
-        </div>
-        <div class="form-group">
-          <label>Empresa *</label>
-          <select id="plt-res-empresa"></select>
-        </div>
-        <div class="form-group">
-          <label>Tipo de resguardo *</label>
-          <select id="plt-res-tipo" onchange="plt_res_actualizarCampos()">
-            <option value="computo">Equipo de cómputo</option>
-            <option value="celular">Celular / Línea</option>
-            <option value="dispositivo">Dispositivo electrónico</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Nombre de quien entrega</label>
-          <input type="text" id="plt-res-entrego" placeholder="Ej. Sistemas TI">
-        </div>
-        <div class="form-group full">
-          <label>Nombre de la empresa en el documento</label>
-          <input type="text" id="plt-res-empresa-doc" placeholder="Ej. CAR COMERCIALIZADORA S.A DE C.V">
-        </div>
-      </div>
-
-      <!-- Campos activos -->
-      <div style="margin-bottom:14px">
-        <div style="font-size:12px;font-weight:500;color:var(--text2);margin-bottom:10px">Campos a mostrar en el documento</div>
-        <div id="plt-res-campos-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px"></div>
-      </div>
-
-      <!-- Cláusula -->
-      <div class="form-group full">
-        <label>Cláusula legal</label>
-        <textarea id="plt-res-clausula" rows="4"
-          style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:10px 12px;color:var(--text);font-family:var(--font);font-size:13px;resize:vertical;outline:none"
-          placeholder="Texto de responsabilidad que aparece en el documento…"></textarea>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeModal('modal-plantilla-res')">Cancelar</button>
+      <div style="font-size:15px;font-weight:600" id="modal-plt-res-titulo">Nuevo formato de resguardo</div>
+      <div style="flex:1"></div>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('modal-plantilla-res')">Cancelar</button>
       <button class="btn btn-primary" onclick="guardarPlantillaRes()">💾 Guardar formato</button>
+    </div>
+
+    <!-- Toolbar de configuración -->
+    <div style="display:flex;align-items:center;gap:12px;padding:10px 20px;background:var(--bg3);border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:6px">
+        <label style="font-size:12px;color:var(--text3)">Nombre</label>
+        <input type="text" id="plt-res-nombre" placeholder="Ej. Resguardo Laptop"
+          style="width:180px;padding:5px 10px;font-size:13px">
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <label style="font-size:12px;color:var(--text3)">Empresa</label>
+        <select id="plt-res-empresa" style="padding:5px 10px;font-size:13px"></select>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <label style="font-size:12px;color:var(--text3)">Tipo</label>
+        <select id="plt-res-tipo" onchange="plt_res_actualizarCampos()" style="padding:5px 10px;font-size:13px">
+          <option value="computo">Equipo de cómputo</option>
+          <option value="celular">Celular / Línea</option>
+          <option value="dispositivo">Dispositivo electrónico</option>
+        </select>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <label style="font-size:12px;color:var(--text3)">Entrega</label>
+        <input type="text" id="plt-res-entrego" placeholder="Sistemas TI"
+          style="width:130px;padding:5px 10px;font-size:13px">
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <label style="font-size:12px;color:var(--text3)">Empresa en doc.</label>
+        <input type="text" id="plt-res-empresa-doc" placeholder="CAR COMERCIALIZADORA S.A DE C.V"
+          style="width:240px;padding:5px 10px;font-size:13px" oninput="plt_actualizarPreview()">
+      </div>
+    </div>
+
+    <!-- Cuerpo: editor + preview -->
+    <div style="flex:1;display:flex;overflow:hidden">
+
+      <!-- Panel izquierdo: editor + variables + campos -->
+      <div style="width:45%;display:flex;flex-direction:column;border-right:1px solid var(--border);overflow:hidden">
+
+        <!-- Variables disponibles -->
+        <div style="padding:10px 14px;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0">
+          <div style="font-size:11px;color:var(--text3);margin-bottom:6px;font-weight:500">VARIABLES — clic para insertar en el texto</div>
+          <div id="plt-vars-grid" style="display:flex;flex-wrap:wrap;gap:4px"></div>
+        </div>
+
+        <!-- Campos activos -->
+        <div style="padding:10px 14px;border-bottom:1px solid var(--border);flex-shrink:0">
+          <div style="font-size:11px;color:var(--text3);margin-bottom:6px;font-weight:500">CAMPOS EN EL DOCUMENTO</div>
+          <div id="plt-res-campos-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:5px"></div>
+        </div>
+
+        <!-- Área de edición de texto -->
+        <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;padding:14px">
+          <div style="font-size:11px;color:var(--text3);margin-bottom:6px;font-weight:500">TEXTO DEL DOCUMENTO</div>
+          <textarea id="plt-res-clausula"
+            oninput="plt_actualizarPreview()"
+            style="flex:1;width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:12px;color:var(--text);font-family:var(--mono);font-size:12px;line-height:1.7;resize:none;outline:none;box-sizing:border-box"
+            placeholder="Escribe el texto completo del documento. Usa «VARIABLE» para datos dinámicos.&#10;&#10;Ejemplo:&#10;RECIBÍ EQUIPO PARA USO EN FUNCIONES LABORALES.&#10;&#10;EMPLEADO: «NOMBRE»&#10;NÚMERO: «NUMERO»"></textarea>
+        </div>
+      </div>
+
+      <!-- Panel derecho: preview tipo Word -->
+      <div style="flex:1;background:#e8e8e8;overflow-y:auto;display:flex;justify-content:center;padding:24px">
+        <div id="plt-preview-doc"
+          style="width:794px;min-height:1123px;background:white;padding:60px 72px;box-shadow:0 2px 12px rgba(0,0,0,0.15);font-family:Arial,sans-serif;font-size:11pt;line-height:1.6;color:#000;flex-shrink:0">
+          <!-- Preview se genera dinámicamente -->
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -5223,6 +5250,7 @@ let plt_res_editId = null;
 
 function plt_res_actualizarCampos() {
   const tipo  = document.getElementById('plt-res-tipo')?.value || 'computo';
+  plt_renderVars();
   const campos = CAMPOS_POR_TIPO[tipo] || [];
   const grid   = document.getElementById('plt-res-campos-grid');
   if (!grid) return;
@@ -5236,6 +5264,168 @@ function plt_res_actualizarCampos() {
       ${c.label}
     </label>`;
   }).join('');
+}
+
+
+// ─── EDITOR DE PLANTILLA TIPO WORD ───────────────────────────────
+
+const VARS_POR_TIPO = {
+  computo: [
+    { key:'«NOMBRE»',      label:'Nombre empleado' },
+    { key:'«AREA»',        label:'Área' },
+    { key:'«EMPRESA»',     label:'Empresa' },
+    { key:'«FECHA»',       label:'Fecha' },
+    { key:'«TIPO_EQUIPO»', label:'Tipo equipo' },
+    { key:'«MARCA»',       label:'Marca' },
+    { key:'«MODELO»',      label:'Modelo' },
+    { key:'«SERIE»',       label:'No. serie' },
+    { key:'«INVENTARIO»',  label:'No. inventario' },
+    { key:'«COLOR»',       label:'Color' },
+    { key:'«PROCESADOR»',  label:'Procesador' },
+    { key:'«DISCO»',       label:'Disco duro' },
+    { key:'«RAM»',         label:'Memoria RAM' },
+    { key:'«SO»',          label:'Sistema operativo' },
+    { key:'«ACCESORIOS»',  label:'Accesorios' },
+    { key:'«NOMBRE_EMPRESA»', label:'Nombre empresa doc.' },
+    { key:'«QUIEN_ENTREGA»',  label:'Quien entrega' },
+  ],
+  celular: [
+    { key:'«NOMBRE»',      label:'Nombre empleado' },
+    { key:'«PUESTO»',      label:'Puesto' },
+    { key:'«AREA»',        label:'Área' },
+    { key:'«EMPRESA»',     label:'Empresa' },
+    { key:'«FECHA»',       label:'Fecha' },
+    { key:'«NUMERO»',      label:'Número línea' },
+    { key:'«OPERADORA»',   label:'Operadora' },
+    { key:'«ICCID»',       label:'ICCID' },
+    { key:'«PLAN»',        label:'Plan' },
+    { key:'«MARCA»',       label:'Marca equipo' },
+    { key:'«MODELO»',      label:'Modelo equipo' },
+    { key:'«IMEI»',        label:'IMEI' },
+    { key:'«COLOR»',       label:'Color' },
+    { key:'«COSTO_A_CUBRIR»', label:'Costo a cubrir' },
+    { key:'«LETRA_COSTO»', label:'Costo en letra' },
+    { key:'«PARCIALIDADES»', label:'Parcialidades' },
+    { key:'«MESES»',       label:'Meses plan' },
+    { key:'«NOMBRE_EMPRESA»', label:'Nombre empresa doc.' },
+    { key:'«QUIEN_ENTREGA»',  label:'Quien entrega' },
+  ],
+  dispositivo: [
+    { key:'«NOMBRE»',      label:'Nombre empleado' },
+    { key:'«AREA»',        label:'Área' },
+    { key:'«EMPRESA»',     label:'Empresa' },
+    { key:'«FECHA»',       label:'Fecha' },
+    { key:'«TIPO_EQUIPO»', label:'Tipo dispositivo' },
+    { key:'«MARCA»',       label:'Marca' },
+    { key:'«MODELO»',      label:'Modelo' },
+    { key:'«SERIE»',       label:'No. serie' },
+    { key:'«COLOR»',       label:'Color' },
+    { key:'«ACCESORIOS»',  label:'Accesorios' },
+    { key:'«NOMBRE_EMPRESA»', label:'Nombre empresa doc.' },
+    { key:'«QUIEN_ENTREGA»',  label:'Quien entrega' },
+  ],
+};
+
+function plt_renderVars() {
+  const tipo = document.getElementById('plt-res-tipo')?.value || 'computo';
+  const vars = VARS_POR_TIPO[tipo] || VARS_POR_TIPO.computo;
+  const grid = document.getElementById('plt-vars-grid');
+  if (!grid) return;
+  grid.innerHTML = vars.map(v => `
+    <button onclick="plt_insertarVar('${v.key}')"
+      style="font-size:11px;padding:3px 8px;background:rgba(79,142,247,0.1);border:1px solid rgba(79,142,247,0.25);border-radius:4px;color:#7eb3fa;cursor:pointer;font-family:var(--mono);white-space:nowrap"
+      title="${v.label}">
+      ${v.key}
+    </button>`).join('');
+}
+
+function plt_insertarVar(variable) {
+  const ta = document.getElementById('plt-res-clausula');
+  if (!ta) return;
+  const start = ta.selectionStart;
+  const end   = ta.selectionEnd;
+  const val   = ta.value;
+  ta.value = val.substring(0, start) + variable + val.substring(end);
+  ta.selectionStart = ta.selectionEnd = start + variable.length;
+  ta.focus();
+  plt_actualizarPreview();
+}
+
+function plt_actualizarPreview() {
+  const prev = document.getElementById('plt-preview-doc');
+  if (!prev) return;
+  const texto      = document.getElementById('plt-res-clausula')?.value || '';
+  const empresaDoc = document.getElementById('plt-res-empresa-doc')?.value || 'NOMBRE DE LA EMPRESA';
+  const entrego    = document.getElementById('plt-res-entrego')?.value || 'Sistemas TI';
+
+  // Sustituir variables con valores de ejemplo
+  const ejemplos = {
+    '«NOMBRE»': 'JUAN PÉREZ LÓPEZ',
+    '«PUESTO»': 'Ejecutivo de Ventas',
+    '«AREA»': 'Ventas',
+    '«EMPRESA»': empresaDoc,
+    '«FECHA»': new Date().toLocaleDateString('es-MX', {day:'2-digit',month:'long',year:'numeric'}).toUpperCase(),
+    '«NUMERO»': '9511234567',
+    '«OPERADORA»': 'Telcel',
+    '«ICCID»': '8952140123456789012',
+    '«PLAN»': 'Plan Negocios 10GB',
+    '«MARCA»': 'SAMSUNG',
+    '«MODELO»': 'GALAXY A55',
+    '«IMEI»': '354123456789012',
+    '«COLOR»': 'NEGRO',
+    '«SERIE»': 'SVC123456ABC',
+    '«INVENTARIO»': 'LAP-001',
+    '«TIPO_EQUIPO»': 'LAPTOP',
+    '«PROCESADOR»': 'Intel Core i7 13th Gen',
+    '«DISCO»': '512 Gb SSD',
+    '«RAM»': '16 Gb DDR5',
+    '«SO»': 'Windows 11 Pro',
+    '«ACCESORIOS»': 'Eliminador de corriente propio de marca',
+    '«COSTO_A_CUBRIR»': '13,500.00',
+    '«LETRA_COSTO»': 'TRECE MIL QUINIENTOS PESOS 00/100 M.N.',
+    '«PARCIALIDADES»': '8',
+    '«MESES»': '24',
+    '«NOMBRE_EMPRESA»': empresaDoc,
+    '«QUIEN_ENTREGA»': entrego,
+  };
+
+  let textoEjemplo = texto;
+  Object.entries(ejemplos).forEach(([k,v]) => {
+    textoEjemplo = textoEjemplo.replaceAll(k, `<span style="color:#1a56db;font-weight:600">${v}</span>`);
+  });
+
+  // Convertir saltos de línea en párrafos
+  const parrafos = textoEjemplo.split('\n').map(linea => {
+    if (!linea.trim()) return '<div style="height:8px"></div>';
+    // Detectar si es título (todo mayúsculas, corto)
+    const esLimpia = linea.replace(/<[^>]+>/g,'').trim();
+    const esTitulo = esLimpia === esLimpia.toUpperCase() && esLimpia.length < 60 && !esLimpia.includes('.');
+    if (esTitulo && esLimpia.length > 3) {
+      return `<div style="text-align:center;font-weight:bold;margin:10px 0 4px">${linea}</div>`;
+    }
+    return `<p style="margin:3px 0">${linea}</p>`;
+  }).join('');
+
+  prev.innerHTML = `
+    <div style="text-align:center;font-weight:bold;font-size:13pt;border:2px solid #555;padding:8px 16px;margin-bottom:20px;background:#f5f5f5">
+      ${empresaDoc}
+    </div>
+    <div style="margin-bottom:16px;font-size:9pt;color:#888;text-align:center">
+      Vista previa — los valores en <span style="color:#1a56db;font-weight:600">azul</span> son datos de ejemplo
+    </div>
+    <div style="font-size:11pt;line-height:1.7">
+      ${parrafos}
+    </div>
+    <div style="margin-top:40px;display:flex;justify-content:space-between">
+      <div style="text-align:center;width:200px">
+        <div style="border-top:1px solid #000;padding-top:4px;font-size:9pt">RECIBIO</div>
+        <div style="font-size:10pt;margin-top:4px;font-weight:bold">JUAN PÉREZ LÓPEZ</div>
+      </div>
+      <div style="text-align:center;width:200px">
+        <div style="border-top:1px solid #000;padding-top:4px;font-size:9pt">ENTREGÓ</div>
+        <div style="font-size:10pt;margin-top:4px;font-weight:bold">${entrego.toUpperCase()}</div>
+      </div>
+    </div>`;
 }
 
 function abrirModalPlantillaRes(id) {
@@ -5261,6 +5451,8 @@ function abrirModalPlantillaRes(id) {
       });
     }, 50);
   }
+  plt_renderVars();
+  setTimeout(plt_actualizarPreview, 80);
   openModal('modal-plantilla-res');
 }
 
