@@ -1984,10 +1984,12 @@ function openModal(id) {
     if (selEmp && selEmp.options.length) selEmp.selectedIndex = 0;
     if (selCen && selCen.options.length) selCen.selectedIndex = 0;
     limpiarEmpleadoAC();
-    limpiarCompraAC();
+    limpiarAlmacenResAC();
     res_poblarTipos();
     res_actualizarCampos();
     limpiarLineaAC();
+    _resEditId = null;
+    document.getElementById('modal-res-titulo').textContent = 'Nuevo resguardo';
   }
   if (id === 'modal-compra') {
     const today = new Date().toISOString().split('T')[0];
@@ -2616,7 +2618,7 @@ function editarResguardo(id) {
   // Esperar a que el modal abra y luego rellenar campos
   setTimeout(() => {
     // Marcar como edición
-    document.getElementById('res-edit-id').value = String(r.id);
+    _resEditId = r.id;
     document.getElementById('modal-res-titulo').textContent = 'Editar resguardo';
 
     // Empleado
@@ -2738,7 +2740,7 @@ function guardarResguardo() {
     conEquipo:        esCelular ? conEquipo : false,
   };
 
-  const editId = document.getElementById('res-edit-id')?.value;
+  const editId = _resEditId;
   if (editId) {
     // EDICIÓN: reemplazar el resguardo existente
     const idx = DB.resguardos.findIndex(x => String(x.id) === String(editId));
@@ -2781,7 +2783,7 @@ function guardarResguardo() {
   renderAlmacen();
   renderLineas();
   actualizarBadges();
-  document.getElementById('res-edit-id').value = '';
+  _resEditId = null;
   document.getElementById('modal-res-titulo').textContent = 'Nuevo resguardo';
   toast('Resguardo guardado correctamente');
 }
@@ -3843,6 +3845,7 @@ function alm_eliminar(id) {
 // Una PC armada vive en DB.compras con origen:'armado' y referencia a los items consumidos
 
 let arm_lineas = [];  // [{ almacenId, qtyPorPC }]
+let _resEditId = null;  // ID del resguardo en edición
 
 function arm_agregarLinea() {
   arm_lineas.push({ almacenId: null, qtyPorPC: 1 });
