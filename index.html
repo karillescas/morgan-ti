@@ -888,28 +888,33 @@
       <div class="form-grid">
         <div class="form-group full">
           <label>Descripción *</label>
-          <input type="text" id="alm-desc" placeholder="Ej. Disco SSD 512GB Samsung">
+          <input type="text" id="alm-desc" placeholder="Ej. Samsung Galaxy A55 Negro">
         </div>
         <div class="form-group">
           <label>Tipo</label>
-          <select id="alm-tipo-sel">
+          <select id="alm-tipo-sel" onchange="alm_toggleCelular()">
             <option value="Componente">Componente</option>
             <option value="Equipo">Equipo</option>
+            <option value="Celular">Celular</option>
             <option value="Consumible">Consumible</option>
             <option value="Accesorio">Accesorio</option>
           </select>
         </div>
         <div class="form-group">
           <label>Marca</label>
-          <input type="text" id="alm-marca" placeholder="Samsung, WD…" list="dl-marcas">
+          <input type="text" id="alm-marca" placeholder="Samsung, Apple…" list="dl-marcas-cel">
         </div>
         <div class="form-group">
+          <label>Modelo</label>
+          <input type="text" id="alm-modelo" placeholder="Ej. Galaxy A55">
+        </div>
+        <div class="form-group" id="alm-grupo-qty">
           <label>Cantidad *</label>
           <input type="number" id="alm-qty" value="1" min="1">
         </div>
         <div class="form-group">
-          <label>Costo unitario $</label>
-          <input type="number" id="alm-costo" placeholder="0.00" step="0.01">
+          <label>Costo unitario $ <span style="color:var(--text3);font-size:11px">(IVA incluido)</span></label>
+          <input type="number" id="alm-costo" placeholder="0.00" step="0.01" oninput="alm_calcularMensual()">
         </div>
         <div class="form-group">
           <label>Factura / Referencia</label>
@@ -918,6 +923,46 @@
         <div class="form-group">
           <label>Fecha</label>
           <input type="date" id="alm-fecha">
+        </div>
+      </div>
+
+      <!-- Sección extra para celulares -->
+      <div id="alm-grupo-celular" style="display:none;margin-top:12px;padding:14px;background:rgba(45,212,191,0.05);border:1px solid rgba(45,212,191,0.2);border-radius:8px">
+        <div style="font-size:11px;font-weight:500;color:var(--teal);margin-bottom:12px;text-transform:uppercase;letter-spacing:.6px">📱 Datos del equipo celular</div>
+        <div class="form-grid" style="margin:0">
+          <div class="form-group">
+            <label>IMEI</label>
+            <input type="text" id="alm-imei" placeholder="354123456789012" style="font-family:var(--mono)">
+          </div>
+          <div class="form-group">
+            <label>Color</label>
+            <input type="text" id="alm-color" placeholder="Negro, Blanco, Azul…">
+          </div>
+          <div class="form-group">
+            <label>Monto a pagar por el empleado $</label>
+            <input type="number" id="alm-monto-empleado" placeholder="0.00" step="0.01" oninput="alm_calcularMensual()">
+          </div>
+          <div class="form-group">
+            <label>Plazo (meses)</label>
+            <select id="alm-plazo-meses" onchange="alm_calcularMensual()">
+              <option value="">Sin plazo</option>
+              <option value="1">1 mes</option>
+              <option value="2">2 meses</option>
+              <option value="3">3 meses</option>
+              <option value="4">4 meses</option>
+              <option value="5">5 meses</option>
+              <option value="6">6 meses</option>
+              <option value="7">7 meses</option>
+              <option value="8">8 meses</option>
+              <option value="9">9 meses</option>
+              <option value="10">10 meses</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Descuento mensual $ <span style="color:var(--teal);font-size:11px">✦ auto</span></label>
+            <input type="number" id="alm-mensual" placeholder="Se calcula automáticamente" readonly
+              style="background:rgba(45,212,191,0.06);border-color:rgba(45,212,191,0.2)">
+          </div>
         </div>
       </div>
     </div>
@@ -2069,9 +2114,13 @@ function openModal(id) {
   }
   if (id === 'modal-ajuste-almacen') {
     const today = new Date().toISOString().split('T')[0];
-    ['alm-desc','alm-marca','alm-factura'].forEach(id2 => { const el=document.getElementById(id2); if(el) el.value=''; });
+    ['alm-desc','alm-marca','alm-modelo','alm-factura','alm-imei','alm-color','alm-monto-empleado','alm-mensual'].forEach(id2 => { const el=document.getElementById(id2); if(el) el.value=''; });
     const qEl=document.getElementById('alm-qty'); if(qEl) qEl.value='1';
     const cEl=document.getElementById('alm-costo'); if(cEl) cEl.value='';
+    const tEl=document.getElementById('alm-tipo-sel'); if(tEl) tEl.value='Componente';
+    const qEl=document.getElementById('alm-qty'); if(qEl){ qEl.value=1; qEl.readOnly=false; }
+    const pEl=document.getElementById('alm-plazo-meses'); if(pEl) pEl.value='';
+    const grpCel=document.getElementById('alm-grupo-celular'); if(grpCel) grpCel.style.display='none';
     const fEl=document.getElementById('alm-fecha'); if(fEl) fEl.value=today;
   }
 }
@@ -2612,7 +2661,10 @@ function filtrarAlmacenResAC() {
       <span style="font-size:16px">📦</span>
       <div style="flex:1">
         <div style="font-size:13px;font-weight:500">${a.desc}</div>
-        <div style="font-size:11px;color:var(--text3)">${a.marca||''}${a.marca&&a.tipo?' · ':''}${a.tipo} · Disp: ${alm_stockDisp(a)}</div>
+        <div style="font-size:11px;color:var(--text3)">${a.tipo==='Celular'
+          ? [a.marca,a.modelo,a.imei?'IMEI:'+a.imei:'',a.color].filter(Boolean).join(' · ')
+          : (a.marca||'')+(a.marca?' · ':'')+a.tipo} · Disp: ${alm_stockDisp(a)}</div>
+        ${a.tipo==='Celular' && a.montoMensual ? `<div style="font-size:11px;color:var(--teal)">$${a.montoMensual.toFixed(2)}/mes × ${a.plazoMeses} meses</div>` : ''}
       </div>
       ${a.costo ? `<span style="font-size:11px;color:var(--teal)">${formatMoney(a.costo)}</span>` : ''}
     </div>`).join('');
@@ -2629,11 +2681,25 @@ function seleccionarAlmacenResAC(id) {
   sel.style.display = 'flex';
   document.getElementById('res-almacen-sel-text').textContent = a.desc;
   document.getElementById('res-almacen-sel-sub').textContent  = (a.marca||'') + (a.marca?' · ':'') + (a.tipo||'');
-  // Prellenar marca/modelo si están vacíos
-  const m = document.getElementById('res-marca');
+  // Prellenar datos del equipo
+  const m  = document.getElementById('res-marca');
   const mo = document.getElementById('res-modelo');
-  if (m && !m.value)  m.value  = a.marca || '';
-  if (mo && !mo.value) mo.value = a.desc  || '';
+  if (m && !m.value)  m.value = a.marca || '';
+  if (mo && !mo.value) mo.value = a.modelo || a.desc || '';
+  // Si es celular, llenar campos extra
+  if (a.tipo === 'Celular') {
+    const imeiEl = document.getElementById('res-cel-imei');
+    const colorEl = document.getElementById('res-cel-color');
+    const marcaEl = document.getElementById('res-cel-marca');
+    const modeloEl = document.getElementById('res-cel-modelo');
+    if (imeiEl && a.imei)   imeiEl.value  = a.imei;
+    if (colorEl && a.color) colorEl.value = a.color;
+    if (marcaEl && a.marca) marcaEl.value = a.marca;
+    if (modeloEl && a.modelo) modeloEl.value = a.modelo;
+    // Marcar "con equipo" automáticamente
+    const chk = document.getElementById('res-celular-con-equipo');
+    if (chk) { chk.checked = true; res_toggleEquipoCelular(); }
+  }
 }
 
 function limpiarAlmacenResAC() {
@@ -3801,27 +3867,74 @@ function alm_ingresarDesdeXML(partida) {
   }
 }
 
+function alm_toggleCelular() {
+  const esCelular = document.getElementById('alm-tipo-sel').value === 'Celular';
+  const grpCel = document.getElementById('alm-grupo-celular');
+  const grpQty = document.getElementById('alm-grupo-qty');
+  if (grpCel) grpCel.style.display = esCelular ? '' : 'none';
+  // Para celular, cantidad siempre = 1 (cada unidad tiene IMEI único)
+  if (esCelular) {
+    const qtyEl = document.getElementById('alm-qty');
+    if (qtyEl) { qtyEl.value = 1; qtyEl.readOnly = true; }
+  } else {
+    const qtyEl = document.getElementById('alm-qty');
+    if (qtyEl) qtyEl.readOnly = false;
+  }
+}
+
+function alm_calcularMensual() {
+  const monto = parseFloat(document.getElementById('alm-monto-empleado')?.value) || 0;
+  const plazo = parseInt(document.getElementById('alm-plazo-meses')?.value) || 0;
+  const mensualEl = document.getElementById('alm-mensual');
+  if (!mensualEl) return;
+  if (monto > 0 && plazo > 0) {
+    mensualEl.value = (monto / plazo).toFixed(2);
+  } else {
+    mensualEl.value = '';
+  }
+}
+
 function alm_guardarEntrada() {
   const desc = document.getElementById('alm-desc').value.trim();
-  const qty  = parseInt(document.getElementById('alm-qty').value) || 1;
+  const tipo = document.getElementById('alm-tipo-sel').value;
+  const qty  = tipo === 'Celular' ? 1 : (parseInt(document.getElementById('alm-qty').value) || 1);
   if (!desc) { toast('Escribe la descripción', '⚠️'); return; }
-  DB.almacen.push({
-    id:         Date.now(),
+
+  const esCelular = tipo === 'Celular';
+  const imei = esCelular ? document.getElementById('alm-imei').value.trim() : '';
+
+  // Para celular con IMEI, verificar que no esté duplicado
+  if (esCelular && imei) {
+    const duplicado = DB.almacen.find(a => a.imei === imei);
+    if (duplicado) { toast('Ya existe un equipo con ese IMEI: ' + imei, '⚠️'); return; }
+  }
+
+  const entrada = {
+    id:              Date.now() + Math.random(),
     desc,
-    tipo:       document.getElementById('alm-tipo-sel').value,
-    marca:      document.getElementById('alm-marca').value.trim(),
-    costo:      parseFloat(document.getElementById('alm-costo').value) || 0,
-    stockTotal: qty,
-    stockUsado: 0,
-    factura:    document.getElementById('alm-factura').value.trim(),
-    fecha:      document.getElementById('alm-fecha').value,
-    compraId:   null
-  });
+    tipo,
+    marca:           document.getElementById('alm-marca').value.trim(),
+    modelo:          document.getElementById('alm-modelo')?.value.trim() || '',
+    costo:           parseFloat(document.getElementById('alm-costo').value) || 0,
+    stockTotal:      qty,
+    stockUsado:      0,
+    factura:         document.getElementById('alm-factura').value.trim(),
+    fecha:           document.getElementById('alm-fecha').value,
+    compraId:        null,
+    // Campos celular
+    imei:            esCelular ? imei : '',
+    color:           esCelular ? document.getElementById('alm-color').value.trim() : '',
+    montoEmpleado:   esCelular ? (parseFloat(document.getElementById('alm-monto-empleado').value) || 0) : 0,
+    plazoMeses:      esCelular ? (parseInt(document.getElementById('alm-plazo-meses').value) || 0) : 0,
+    montoMensual:    esCelular ? (parseFloat(document.getElementById('alm-mensual').value) || 0) : 0,
+  };
+
+  DB.almacen.push(entrada);
   guardarDB();
   closeModal('modal-ajuste-almacen');
   renderAlmacen();
   actualizarBadges();
-  toast(qty + ' unidad' + (qty>1?'es':'') + ' de "' + desc + '" agregadas al almacén');
+  toast(qty + ' unidad' + (qty>1?'es':'') + ' de "' + desc + '" agregadas al almacén ✓');
 }
 
 function renderAlmacen() {
@@ -5733,6 +5846,9 @@ async function descargarResguardo(id) {
     ? new Date(r.fecha+'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'}).toUpperCase()
     : new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'}).toUpperCase();
 
+  // Datos del equipo en almacén (si aplica)
+  const almItem = r.almacenId ? (DB.almacen?.find(a => a.id == r.almacenId) || null) : null;
+
   // Mapa completo de sustitución de variables
   const varsMap = {
     '«NOMBRE»':         r.empleado              || '',
@@ -5757,8 +5873,12 @@ async function descargarResguardo(id) {
     '«ICCID»':          linData.iccid           || '',
     '«PLAN»':           linData.plan            || r.lineaPlan      || '',
     '«COSTO_LINEA»':    linData.costo ? formatMoney(linData.costo) : '',
-    '«PLAZO»':          linData.plazo           || '',
+    '«PLAZO»':          linData.plazo           || r.plazoMeses?.toString()  || '',
     '«VENCIMIENTO»':    linData.vencimiento     || '',
+    '«PARCIALIDADES»':  r.plazoMeses?.toString() || '',
+    '«MESES»':          r.plazoMeses?.toString() || '',
+    '«COSTO_A_CUBRIR»': r.montoEmpleado ? r.montoEmpleado.toFixed(2) : (almItem?.montoEmpleado ? almItem.montoEmpleado.toFixed(2) : ''),
+    '«MONTO_MENSUAL»':  r.montoMensual  ? r.montoMensual.toFixed(2)  : (almItem?.montoMensual  ? almItem.montoMensual.toFixed(2)  : ''),
     '«NOMBRE_EMPRESA»': empresaDoc,
     '«QUIEN_ENTREGA»':  entregaDoc,
   };
