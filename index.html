@@ -5269,61 +5269,69 @@ function plt_res_actualizarCampos() {
 
 // ─── EDITOR DE PLANTILLA TIPO WORD ───────────────────────────────
 
+// Variables organizadas por categoría y tipo
+// Todas mapean directamente a campos reales en DB.resguardos, DB.lineas, DB.empleados
+const VARS_BASE = [
+  // Del empleado
+  { key:'«NOMBRE»',         label:'Nombre empleado',     cat:'Empleado',   fuente:'empleado.nombre' },
+  { key:'«PUESTO»',         label:'Puesto / Cargo',      cat:'Empleado',   fuente:'empleado.cargo' },
+  { key:'«AREA»',           label:'Área / Depto.',       cat:'Empleado',   fuente:'empleado.area' },
+  { key:'«EMAIL»',          label:'Email empleado',      cat:'Empleado',   fuente:'empleado.email' },
+  // Del resguardo
+  { key:'«EMPRESA»',        label:'Empresa',             cat:'Resguardo',  fuente:'resguardo.empresa' },
+  { key:'«CENTRO_COSTO»',   label:'Centro de costo',     cat:'Resguardo',  fuente:'resguardo.centroCosto' },
+  { key:'«FECHA»',          label:'Fecha de asignación', cat:'Resguardo',  fuente:'resguardo.fecha' },
+  { key:'«MODALIDAD»',      label:'Modalidad',           cat:'Resguardo',  fuente:'resguardo.modalidad' },
+  { key:'«INVENTARIO»',     label:'No. inventario',      cat:'Resguardo',  fuente:'resguardo.inventario' },
+  { key:'«OBS»',            label:'Observaciones',       cat:'Resguardo',  fuente:'resguardo.obs' },
+  // Del equipo (cómputo/dispositivo)
+  { key:'«TIPO_EQUIPO»',    label:'Tipo de equipo',      cat:'Equipo',     fuente:'resguardo.tipo' },
+  { key:'«MARCA»',          label:'Marca',               cat:'Equipo',     fuente:'resguardo.marca' },
+  { key:'«MODELO»',         label:'Modelo',              cat:'Equipo',     fuente:'resguardo.modelo' },
+  { key:'«SERIE»',          label:'No. serie / IMEI',    cat:'Equipo',     fuente:'resguardo.serie' },
+  { key:'«COLOR»',          label:'Color',               cat:'Equipo',     fuente:'resguardo.color' },
+  { key:'«ACCESORIOS»',     label:'Accesorios',          cat:'Equipo',     fuente:'resguardo.accesorios' },
+];
+
+const VARS_CELULAR = [
+  // De la línea (DB.lineas)
+  { key:'«NUMERO»',         label:'Número de línea',     cat:'Línea',      fuente:'linea.numero' },
+  { key:'«OPERADORA»',      label:'Operadora',           cat:'Línea',      fuente:'linea.operadora' },
+  { key:'«ICCID»',          label:'ICCID del chip',      cat:'Línea',      fuente:'linea.iccid' },
+  { key:'«PLAN»',           label:'Plan / Tarifa',       cat:'Línea',      fuente:'linea.plan' },
+  { key:'«COSTO_LINEA»',    label:'Costo mensual línea', cat:'Línea',      fuente:'linea.costo' },
+  { key:'«PLAZO»',          label:'Plazo del contrato',  cat:'Línea',      fuente:'linea.plazo' },
+  { key:'«VENCIMIENTO»',    label:'Fecha vencimiento',   cat:'Línea',      fuente:'linea.vencimiento' },
+  // Del equipo celular
+  { key:'«MARCA»',          label:'Marca del equipo',    cat:'Equipo',     fuente:'resguardo.marca' },
+  { key:'«MODELO»',         label:'Modelo del equipo',   cat:'Equipo',     fuente:'resguardo.modelo' },
+  { key:'«IMEI»',           label:'IMEI',                cat:'Equipo',     fuente:'resguardo.serie' },
+  { key:'«COLOR»',          label:'Color',               cat:'Equipo',     fuente:'resguardo.color' },
+  // Costos adicionales
+  { key:'«COSTO_A_CUBRIR»', label:'Costo a cubrir $',    cat:'Costos',     fuente:'manual' },
+  { key:'«LETRA_COSTO»',    label:'Costo en letra',      cat:'Costos',     fuente:'manual' },
+  { key:'«PARCIALIDADES»',  label:'Parcialidades',       cat:'Costos',     fuente:'manual' },
+  { key:'«MESES»',          label:'Meses del plan',      cat:'Costos',     fuente:'manual' },
+];
+
+const VARS_COMPUTO_EXTRA = [
+  { key:'«PROCESADOR»',     label:'Procesador',          cat:'Specs',      fuente:'manual' },
+  { key:'«DISCO»',          label:'Disco duro (Gb)',      cat:'Specs',      fuente:'manual' },
+  { key:'«RAM»',            label:'Memoria RAM (Gb)',     cat:'Specs',      fuente:'manual' },
+  { key:'«SO»',             label:'Sistema operativo',   cat:'Specs',      fuente:'manual' },
+  { key:'«LAN»',            label:'LAN Inalámbrica',     cat:'Specs',      fuente:'manual' },
+  { key:'«WEBCAM»',         label:'Webcam',              cat:'Specs',      fuente:'manual' },
+];
+
+const VARS_DOC = [
+  { key:'«NOMBRE_EMPRESA»', label:'Empresa en documento',cat:'Documento',  fuente:'plantilla.empresaDoc' },
+  { key:'«QUIEN_ENTREGA»',  label:'Quien entrega',       cat:'Documento',  fuente:'plantilla.entrego' },
+];
+
 const VARS_POR_TIPO = {
-  computo: [
-    { key:'«NOMBRE»',      label:'Nombre empleado' },
-    { key:'«AREA»',        label:'Área' },
-    { key:'«EMPRESA»',     label:'Empresa' },
-    { key:'«FECHA»',       label:'Fecha' },
-    { key:'«TIPO_EQUIPO»', label:'Tipo equipo' },
-    { key:'«MARCA»',       label:'Marca' },
-    { key:'«MODELO»',      label:'Modelo' },
-    { key:'«SERIE»',       label:'No. serie' },
-    { key:'«INVENTARIO»',  label:'No. inventario' },
-    { key:'«COLOR»',       label:'Color' },
-    { key:'«PROCESADOR»',  label:'Procesador' },
-    { key:'«DISCO»',       label:'Disco duro' },
-    { key:'«RAM»',         label:'Memoria RAM' },
-    { key:'«SO»',          label:'Sistema operativo' },
-    { key:'«ACCESORIOS»',  label:'Accesorios' },
-    { key:'«NOMBRE_EMPRESA»', label:'Nombre empresa doc.' },
-    { key:'«QUIEN_ENTREGA»',  label:'Quien entrega' },
-  ],
-  celular: [
-    { key:'«NOMBRE»',      label:'Nombre empleado' },
-    { key:'«PUESTO»',      label:'Puesto' },
-    { key:'«AREA»',        label:'Área' },
-    { key:'«EMPRESA»',     label:'Empresa' },
-    { key:'«FECHA»',       label:'Fecha' },
-    { key:'«NUMERO»',      label:'Número línea' },
-    { key:'«OPERADORA»',   label:'Operadora' },
-    { key:'«ICCID»',       label:'ICCID' },
-    { key:'«PLAN»',        label:'Plan' },
-    { key:'«MARCA»',       label:'Marca equipo' },
-    { key:'«MODELO»',      label:'Modelo equipo' },
-    { key:'«IMEI»',        label:'IMEI' },
-    { key:'«COLOR»',       label:'Color' },
-    { key:'«COSTO_A_CUBRIR»', label:'Costo a cubrir' },
-    { key:'«LETRA_COSTO»', label:'Costo en letra' },
-    { key:'«PARCIALIDADES»', label:'Parcialidades' },
-    { key:'«MESES»',       label:'Meses plan' },
-    { key:'«NOMBRE_EMPRESA»', label:'Nombre empresa doc.' },
-    { key:'«QUIEN_ENTREGA»',  label:'Quien entrega' },
-  ],
-  dispositivo: [
-    { key:'«NOMBRE»',      label:'Nombre empleado' },
-    { key:'«AREA»',        label:'Área' },
-    { key:'«EMPRESA»',     label:'Empresa' },
-    { key:'«FECHA»',       label:'Fecha' },
-    { key:'«TIPO_EQUIPO»', label:'Tipo dispositivo' },
-    { key:'«MARCA»',       label:'Marca' },
-    { key:'«MODELO»',      label:'Modelo' },
-    { key:'«SERIE»',       label:'No. serie' },
-    { key:'«COLOR»',       label:'Color' },
-    { key:'«ACCESORIOS»',  label:'Accesorios' },
-    { key:'«NOMBRE_EMPRESA»', label:'Nombre empresa doc.' },
-    { key:'«QUIEN_ENTREGA»',  label:'Quien entrega' },
-  ],
+  computo:     [...VARS_BASE, ...VARS_COMPUTO_EXTRA, ...VARS_DOC],
+  celular:     [...VARS_BASE.filter(v=>!['«TIPO_EQUIPO»','«ACCESORIOS»'].includes(v.key)), ...VARS_CELULAR, ...VARS_DOC],
+  dispositivo: [...VARS_BASE, ...VARS_DOC],
 };
 
 function plt_renderVars() {
@@ -5331,12 +5339,36 @@ function plt_renderVars() {
   const vars = VARS_POR_TIPO[tipo] || VARS_POR_TIPO.computo;
   const grid = document.getElementById('plt-vars-grid');
   if (!grid) return;
-  grid.innerHTML = vars.map(v => `
-    <button onclick="plt_insertarVar('${v.key}')"
-      style="font-size:11px;padding:3px 8px;background:rgba(79,142,247,0.1);border:1px solid rgba(79,142,247,0.25);border-radius:4px;color:#7eb3fa;cursor:pointer;font-family:var(--mono);white-space:nowrap"
-      title="${v.label}">
-      ${v.key}
-    </button>`).join('');
+
+  // Agrupar por categoría
+  const cats = {};
+  vars.forEach(v => {
+    if (!cats[v.cat]) cats[v.cat] = [];
+    cats[v.cat].push(v);
+  });
+
+  const colores = {
+    'Empleado':  { bg:'rgba(167,139,250,0.12)', border:'rgba(167,139,250,0.3)', color:'#a78bfa' },
+    'Resguardo': { bg:'rgba(79,142,247,0.12)',  border:'rgba(79,142,247,0.3)',  color:'#7eb3fa' },
+    'Equipo':    { bg:'rgba(45,212,191,0.12)',  border:'rgba(45,212,191,0.3)',  color:'#2dd4bf' },
+    'Línea':     { bg:'rgba(34,197,94,0.12)',   border:'rgba(34,197,94,0.3)',   color:'#4ade80' },
+    'Specs':     { bg:'rgba(245,158,11,0.12)',  border:'rgba(245,158,11,0.3)',  color:'#fbbf24' },
+    'Costos':    { bg:'rgba(249,115,22,0.12)',  border:'rgba(249,115,22,0.3)',  color:'#fb923c' },
+    'Documento': { bg:'rgba(236,72,153,0.12)',  border:'rgba(236,72,153,0.3)',  color:'#f472b6' },
+  };
+
+  grid.innerHTML = Object.entries(cats).map(([cat, items]) => {
+    const c = colores[cat] || colores['Documento'];
+    const hint = items[0]?.fuente?.startsWith('manual') ? ' <span style="font-size:9px;opacity:.7">(manual)</span>' : '';
+    return `<div style="margin-bottom:6px">
+      <div style="font-size:10px;color:${c.color};font-weight:500;margin-bottom:3px">${cat}${hint}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:3px">
+        ${items.map(v => `<button onclick="plt_insertarVar('${v.key}')"
+          style="font-size:11px;padding:3px 8px;background:${c.bg};border:1px solid ${c.border};border-radius:4px;color:${c.color};cursor:pointer;font-family:var(--mono);white-space:nowrap"
+          title="${v.label} → ${v.fuente}">${v.key}</button>`).join('')}
+      </div>
+    </div>`;
+  }).join('');
 }
 
 function plt_insertarVar(variable) {
@@ -5359,34 +5391,56 @@ function plt_actualizarPreview() {
   const entrego    = document.getElementById('plt-res-entrego')?.value || 'Sistemas TI';
 
   // Sustituir variables con valores de ejemplo
+  // Tomar datos reales de la BD para el preview si hay registros
+  const empEj   = DB.empleados?.[0];
+  const linEj   = DB.lineas?.find(l=>l.estado==='Asignada') || DB.lineas?.[0];
+  const resEj   = DB.resguardos?.[0];
+  const hoy     = new Date().toLocaleDateString('es-MX', {day:'2-digit',month:'long',year:'numeric'}).toUpperCase();
+
   const ejemplos = {
-    '«NOMBRE»': 'JUAN PÉREZ LÓPEZ',
-    '«PUESTO»': 'Ejecutivo de Ventas',
-    '«AREA»': 'Ventas',
-    '«EMPRESA»': empresaDoc,
-    '«FECHA»': new Date().toLocaleDateString('es-MX', {day:'2-digit',month:'long',year:'numeric'}).toUpperCase(),
-    '«NUMERO»': '9511234567',
-    '«OPERADORA»': 'Telcel',
-    '«ICCID»': '8952140123456789012',
-    '«PLAN»': 'Plan Negocios 10GB',
-    '«MARCA»': 'SAMSUNG',
-    '«MODELO»': 'GALAXY A55',
-    '«IMEI»': '354123456789012',
-    '«COLOR»': 'NEGRO',
-    '«SERIE»': 'SVC123456ABC',
-    '«INVENTARIO»': 'LAP-001',
-    '«TIPO_EQUIPO»': 'LAPTOP',
-    '«PROCESADOR»': 'Intel Core i7 13th Gen',
-    '«DISCO»': '512 Gb SSD',
-    '«RAM»': '16 Gb DDR5',
-    '«SO»': 'Windows 11 Pro',
-    '«ACCESORIOS»': 'Eliminador de corriente propio de marca',
+    // Empleado
+    '«NOMBRE»':         empEj?.nombre   || 'JUAN PÉREZ LÓPEZ',
+    '«PUESTO»':         empEj?.cargo    || 'Ejecutivo de Ventas',
+    '«AREA»':           empEj?.area     || 'Ventas',
+    '«EMAIL»':          empEj?.email    || 'empleado@empresa.com',
+    // Resguardo
+    '«EMPRESA»':        resEj?.empresa  || empresaDoc,
+    '«CENTRO_COSTO»':   resEj?.centroCosto || 'A0-CEDIS',
+    '«FECHA»':          resEj?.fecha ? new Date(resEj.fecha+'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'}).toUpperCase() : hoy,
+    '«MODALIDAD»':      resEj?.modalidad || 'Propio',
+    '«INVENTARIO»':     resEj?.inventario || 'CEL-001',
+    '«OBS»':            resEj?.obs || '',
+    // Equipo
+    '«TIPO_EQUIPO»':    resEj?.tipo     || 'LAPTOP',
+    '«MARCA»':          resEj?.marca    || 'SAMSUNG',
+    '«MODELO»':         resEj?.modelo   || 'GALAXY A55',
+    '«SERIE»':          resEj?.serie    || 'SVC123456ABC',
+    '«IMEI»':           resEj?.serie    || '354123456789012',
+    '«COLOR»':          resEj?.color    || 'NEGRO',
+    '«ACCESORIOS»':     'Eliminador de corriente propio de marca',
+    // Línea (datos reales de DB.lineas)
+    '«NUMERO»':         linEj?.numero      || '9511234567',
+    '«OPERADORA»':      linEj?.operadora   || 'Telcel',
+    '«ICCID»':          linEj?.iccid       || '8952140123456789012',
+    '«PLAN»':           linEj?.plan        || 'Plan Negocios 10GB',
+    '«COSTO_LINEA»':    linEj?.costo ? formatMoney(linEj.costo) : '$450.00',
+    '«PLAZO»':          linEj?.plazo       || '24 meses',
+    '«VENCIMIENTO»':    linEj?.vencimiento || '2026-12-31',
+    // Specs
+    '«PROCESADOR»':     'Intel Core i7 13th Gen',
+    '«DISCO»':          '512',
+    '«RAM»':            '16',
+    '«SO»':             'Windows 11 Pro',
+    '«LAN»':            'SÍ',
+    '«WEBCAM»':         'SÍ',
+    // Costos (manuales)
     '«COSTO_A_CUBRIR»': '13,500.00',
-    '«LETRA_COSTO»': 'TRECE MIL QUINIENTOS PESOS 00/100 M.N.',
-    '«PARCIALIDADES»': '8',
-    '«MESES»': '24',
+    '«LETRA_COSTO»':    'TRECE MIL QUINIENTOS PESOS 00/100 M.N.',
+    '«PARCIALIDADES»':  '8',
+    '«MESES»':          '24',
+    // Documento
     '«NOMBRE_EMPRESA»': empresaDoc,
-    '«QUIEN_ENTREGA»': entrego,
+    '«QUIEN_ENTREGA»':  entrego,
   };
 
   let textoEjemplo = texto;
@@ -5705,7 +5759,54 @@ async function descargarResguardo(id) {
   }
 
   // ── Cláusula ────────────────────────────────────────────────────
-  const clausulaBase = clausulaDoc ? clausulaDoc.replace('{EMPRESA}', empresaDoc) : null;
+  // Obtener datos del empleado para variables
+  const empData = DB.empleados?.find(e => e.nombre === r.empleado) || {};
+  const linData = r.lineaId ? (DB.lineas?.find(l => l.id == r.lineaId) || {}) : {};
+  const fechaFmt = r.fecha
+    ? new Date(r.fecha+'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'}).toUpperCase()
+    : new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'}).toUpperCase();
+
+  // Mapa completo de sustitución de variables
+  const varsMap = {
+    '«NOMBRE»':         r.empleado              || '',
+    '«PUESTO»':         empData.cargo           || '',
+    '«AREA»':           empData.area            || '',
+    '«EMAIL»':          empData.email           || '',
+    '«EMPRESA»':        r.empresa               || '',
+    '«CENTRO_COSTO»':   r.centroCosto           || '',
+    '«FECHA»':          fechaFmt,
+    '«MODALIDAD»':      r.modalidad             || '',
+    '«INVENTARIO»':     r.inventario            || '',
+    '«OBS»':            r.obs                   || '',
+    '«TIPO_EQUIPO»':    r.tipo                  || '',
+    '«MARCA»':          r.marca                 || '',
+    '«MODELO»':         r.modelo                || '',
+    '«SERIE»':          r.serie                 || '',
+    '«IMEI»':           r.serie                 || '',
+    '«COLOR»':          r.color                 || '',
+    '«ACCESORIOS»':     r.accesorios            || '',
+    '«NUMERO»':         linData.numero          || r.lineaNumero    || '',
+    '«OPERADORA»':      linData.operadora       || r.lineaOperadora || '',
+    '«ICCID»':          linData.iccid           || '',
+    '«PLAN»':           linData.plan            || r.lineaPlan      || '',
+    '«COSTO_LINEA»':    linData.costo ? formatMoney(linData.costo) : '',
+    '«PLAZO»':          linData.plazo           || '',
+    '«VENCIMIENTO»':    linData.vencimiento     || '',
+    '«NOMBRE_EMPRESA»': empresaDoc,
+    '«QUIEN_ENTREGA»':  entregaDoc,
+  };
+
+  // Función para sustituir todas las variables en un texto
+  function sustituirVars(texto) {
+    if (!texto) return '';
+    let resultado = texto;
+    Object.entries(varsMap).forEach(([k, v]) => {
+      resultado = resultado.replaceAll(k, v);
+    });
+    return resultado;
+  }
+
+  const clausulaBase = clausulaDoc ? sustituirVars(clausulaDoc) : null;
   const importeTexto = formato==='dispositivo' && r.costo
     ? `FACULTO A LA EMPRESA A DESCONTAR DE MIS PERCEPCIONES EL IMPORTE DE $${Number(r.costo).toLocaleString('es-MX',{style:'currency',currency:'MXN'})} EN CASO DE EXTRAVÍO O DESCOMPOSTURA POR MAL USO, O MALTRATO.`
     : 'FACULTO A LA EMPRESA A DESCONTAR DE MIS PERCEPCIONES EL IMPORTE TOTAL EN CASO DE EXTRAVÍO O DESCOMPOSTURA POR MAL USO, O MALTRATO.';
