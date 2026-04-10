@@ -1346,6 +1346,19 @@
       <input type="hidden" id="res-tipo">
       <input type="hidden" id="res-edit-id">
       <input type="hidden" id="res-tipo-icono-val">
+
+      <!-- Badge del tipo seleccionado -->
+      <div id="res-tipo-badge" style="margin-bottom:14px;padding:10px 14px;background:rgba(79,142,247,0.08);border:1px solid rgba(79,142,247,0.2);border-radius:8px;display:flex;align-items:center;gap:10px">
+        <span style="font-size:20px" id="res-tipo-icono">📋</span>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:600;color:var(--text)" id="res-tipo-nombre-badge">—</div>
+          <div style="font-size:11px;color:var(--text3)" id="res-tipo-empresa-badge">—</div>
+        </div>
+        <button onclick="closeModal('modal-resguardo');abrirSelectorTipo()"
+          style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:12px;padding:4px 8px;border-radius:4px"
+          onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text3)'">Cambiar ↩</button>
+      </div>
+
       <div class="form-grid">
         <div class="form-group full">
           <label>Empleado *</label>
@@ -2547,9 +2560,14 @@ function seleccionarTipoResguardo(nombre, empresa, tipoFormato4) {
   // Poner tipo seleccionado
   document.getElementById('res-tipo').value = nombre;
 
-  // Actualizar badge
+  // Actualizar badge del tipo seleccionado
   const iconos = { computo:'🖥', celular:'📱', dispositivo:'📟' };
-  // Solo guardamos en el hidden, ya no hay badge visible
+  const icono   = document.getElementById('res-tipo-icono');
+  const nbadge  = document.getElementById('res-tipo-nombre-badge');
+  const ebadge  = document.getElementById('res-tipo-empresa-badge');
+  if (icono)  icono.textContent  = iconos[tipoFormato4] || '📋';
+  if (nbadge) nbadge.textContent = nombre;
+  if (ebadge) ebadge.textContent = empresa || 'Todas las empresas';
 
   // Actualizar campos según tipo
   res_actualizarCampos();
