@@ -5655,9 +5655,10 @@ async function descargarResguardo(id) {
   } = docx;
 
   // Buscar plantilla configurada para este resguardo
-  const pltRes = obtenerPlantillaParaResguardo(r);
-  // Si hay plantilla, usar su tipo; si no, inferir del nombre
-  const formato = pltRes ? pltRes.tipo : tipoFormato(r.tipo);
+  // Buscar plantilla: primero por nombre exacto (r.tipo = nombre del formato), luego por tipo genérico
+  const pltRes = (DB.plantillasResguardo || []).find(p => p.nombre === r.tipo)
+              || obtenerPlantillaParaResguardo(r);
+  const formato    = pltRes ? pltRes.tipo : tipoFormato(r.tipo);
   const empresaDoc = pltRes?.empresaDoc || 'CAR COMERCIALIZADORA S.A DE C.V';
   const entregaDoc = pltRes?.entrego    || 'SISTEMAS TI';
   const clausulaDoc = pltRes?.clausula  || null;
@@ -5725,59 +5726,7 @@ async function descargarResguardo(id) {
     }) ]})]
   });
 
-  // ── Cuerpo según formato ─────────────────────────────────────────
-  let cuerpo = [];
-
-  if (formato === 'computo') {
-    cuerpo = [
-      new Paragraph({ alignment:AlignmentType.CENTER, spacing:{before:240,after:160}, children:[txtB('RESGUARDO DE EQUIPO DE CÓMPUTO', 22)] }),
-      new Paragraph({ alignment:AlignmentType.BOTH, spacing:{before:80,after:160}, children:[txt('RECIBÍ EQUIPO DE CÓMPUTO NUEVO PARA USO EN FUNCIONES LABORALES, EL CUAL SE DETALLA A CONTINUACIÓN:')] }),
-      campo('EQUIPO:', r.tipo||''),
-      campo('MARCA:', r.marca||''),
-      campo('MODELO:', r.modelo||''),
-      campo('COLOR:', r.color||''),
-      campo('S/N:', r.serie||''),
-      new Paragraph({ spacing:{before:100,after:60}, children:[txtB('CARACTERÍSTICAS DEL EQUIPO:')] }),
-      new Table({
-        width:{size:9360,type:WidthType.DXA}, columnWidths:[4680,4680],
-        rows:[
-          new TableRow({ children:[
-            new TableCell({ borders:noBorder(), width:{size:4680,type:WidthType.DXA}, children:[new Paragraph({ children:[txt('PROCESADOR: '+(r.procesador||''))] })] }),
-            new TableCell({ borders:noBorder(), width:{size:4680,type:WidthType.DXA}, children:[new Paragraph({ children:[txt('LAN INALAMBRICA')] })] }),
-          ]}),
-          new TableRow({ children:[
-            new TableCell({ borders:noBorder(), width:{size:4680,type:WidthType.DXA}, children:[new Paragraph({ children:[txt('DISCO DURO: '+(r.disco||'')+' Gb')] })] }),
-            new TableCell({ borders:noBorder(), width:{size:4680,type:WidthType.DXA}, children:[new Paragraph({ children:[txt('WEB CAM')] })] }),
-          ]}),
-          new TableRow({ children:[
-            new TableCell({ borders:noBorder(), width:{size:4680,type:WidthType.DXA}, children:[new Paragraph({ children:[txt('MEMORIA RAM: '+(r.ram||'')+' Gb')] })] }),
-            new TableCell({ borders:noBorder(), width:{size:4680,type:WidthType.DXA}, children:[new Paragraph({ children:[txt('')] })] }),
-          ]}),
-          new TableRow({ children:[
-            new TableCell({ borders:noBorder(), width:{size:4680,type:WidthType.DXA}, children:[new Paragraph({ children:[txt('S.O.: '+(r.so||'Windows'))] })] }),
-            new TableCell({ borders:noBorder(), width:{size:4680,type:WidthType.DXA}, children:[new Paragraph({ children:[txt('')] })] }),
-          ]}),
-        ]
-      }),
-      new Paragraph({ spacing:{before:120,after:60}, children:[txtB('ACCESORIOS:')] }),
-      new Paragraph({ children:[txt(r.accesorios||'ELIMINADOR DE CORRIENTE PROPIO DE MARCA')] }),
-    ];
-  } else {
-    cuerpo = [
-      new Paragraph({ alignment:AlignmentType.CENTER, spacing:{before:240,after:160}, children:[txtB('RESGUARDO DE DISPOSITIVOS Y EQUIPO ELECTRONICO', 22)] }),
-      new Paragraph({ alignment:AlignmentType.BOTH, spacing:{before:80,after:160}, children:[txt('RECIBÍ DISPOSITIVO PARA USO EN FUNCIONES LABORALES, EL CUAL SE DETALLA A CONTINUACIÓN:')] }),
-      campo('EQUIPO:', r.tipo||''),
-      campo('MARCA:', r.marca||''),
-      campo('MODELO:', r.modelo||''),
-      campo('COLOR:', r.color||''),
-      campo('S/N:', r.serie||''),
-      new Paragraph({ spacing:{before:120,after:60}, children:[txtB('ACCESORIOS:')] }),
-      new Paragraph({ children:[txt(r.accesorios||'ELIMINADOR DE CORRIENTE PROPIO DE MARCA')] }),
-    ];
-  }
-
-  // ── Cláusula ────────────────────────────────────────────────────
-  // Obtener datos del empleado para variables
+  // ── Obtener datos del empleado para variables ──────────────────
   const empData = DB.empleados?.find(e => e.nombre === r.empleado) || {};
   const linData = r.lineaId ? (DB.lineas?.find(l => l.id == r.lineaId) || {}) : {};
   const fechaFmt = r.fecha
@@ -5814,61 +5763,94 @@ async function descargarResguardo(id) {
     '«QUIEN_ENTREGA»':  entregaDoc,
   };
 
-  // Función para sustituir todas las variables en un texto
   function sustituirVars(texto) {
     if (!texto) return '';
-    let resultado = texto;
-    Object.entries(varsMap).forEach(([k, v]) => {
-      resultado = resultado.replaceAll(k, v);
-    });
-    return resultado;
+    let res = texto;
+    Object.entries(varsMap).forEach(([k, v]) => { res = res.replaceAll(k, v); });
+    return res;
   }
 
-  const clausulaBase = clausulaDoc ? sustituirVars(clausulaDoc) : null;
-  const importeTexto = formato==='dispositivo' && r.costo
-    ? `FACULTO A LA EMPRESA A DESCONTAR DE MIS PERCEPCIONES EL IMPORTE DE $${Number(r.costo).toLocaleString('es-MX',{style:'currency',currency:'MXN'})} EN CASO DE EXTRAVÍO O DESCOMPOSTURA POR MAL USO, O MALTRATO.`
-    : 'FACULTO A LA EMPRESA A DESCONTAR DE MIS PERCEPCIONES EL IMPORTE TOTAL EN CASO DE EXTRAVÍO O DESCOMPOSTURA POR MAL USO, O MALTRATO.';
+  // ── Construir el cuerpo del documento ────────────────────────────
+  // Si hay plantilla configurada con clausula, usarla como documento completo
+  // Cada línea del texto = un párrafo en el DOCX
+  let docChildren = [
+    headerTable,
+    new Paragraph({ spacing:{before:100,after:0}, children:[] }),
+    bandaTable,
+  ];
 
-  const clausulaTable = new Table({
-    width:{size:9360,type:WidthType.DXA}, columnWidths:[9360],
-    rows:[new TableRow({ children:[new TableCell({
-      borders:fullBorder(),
-      width:{size:9360,type:WidthType.DXA},
-      margins:{top:100,bottom:100,left:160,right:160},
-      children:[new Paragraph({
-        alignment:AlignmentType.BOTH, spacing:{before:60,after:60},
-        children:[
-          ...(clausulaBase
-            ? [txt(clausulaBase)]
-            : [
-                txt('COMPROMETIENDOME A DARLES UN BUEN USO, ADECUADO Y A DEVOLVERLOS CUANDO LA EMPRESA '),
-                txtB(empresaDoc),
-                txt(' LO REQUIERA, AL MISMO TIEMPO '+importeTexto),
-              ]),
-        ]
-      })]
-    }) ]})]
-  });
+  if (clausulaDoc) {
+    // Usar el texto completo de la plantilla
+    const textoFinal = sustituirVars(clausulaDoc);
+    const lineas = textoFinal.split('\n');
+    lineas.forEach(linea => {
+      const lineaLimpia = linea.trim();
+      if (!lineaLimpia) {
+        // Línea vacía = espacio
+        docChildren.push(new Paragraph({ spacing:{before:60,after:0}, children:[] }));
+        return;
+      }
+      // Detectar si es negrita (texto entre **)
+      const partsNegrita = lineaLimpia.split(/\*([^*]+)\*/g);
+      const runs = [];
+      partsNegrita.forEach((part, idx) => {
+        if (!part) return;
+        if (idx % 2 === 1) {
+          // Parte entre asteriscos = negrita
+          runs.push(new TextRun({ text: part, bold: true }));
+        } else {
+          runs.push(new TextRun({ text: part }));
+        }
+      });
+      // Detectar si la línea es un título (todo mayúsculas y corta)
+      const sinEspacios = lineaLimpia.replace(/\s/g,'');
+      const esTitulo = sinEspacios === sinEspacios.toUpperCase() && lineaLimpia.length < 80 && !lineaLimpia.includes('.');
+      docChildren.push(new Paragraph({
+        alignment: esTitulo ? AlignmentType.CENTER : AlignmentType.BOTH,
+        spacing: { before: esTitulo ? 200 : 60, after: 60 },
+        children: runs,
+      }));
+    });
+  } else {
+    // Sin plantilla: layout por defecto según tipo
+    let cuerpo = [];
+    if (formato === 'computo') {
+      cuerpo = [
+        new Paragraph({ alignment:AlignmentType.CENTER, spacing:{before:240,after:160}, children:[txtB('RESGUARDO DE EQUIPO DE CÓMPUTO', 22)] }),
+        new Paragraph({ alignment:AlignmentType.BOTH, spacing:{before:80,after:160}, children:[txt('RECIBÍ EQUIPO DE CÓMPUTO NUEVO PARA USO EN FUNCIONES LABORALES, EL CUAL SE DETALLA A CONTINUACIÓN:')] }),
+        campo('EQUIPO:', r.tipo||''),
+        campo('MARCA:', r.marca||''),
+        campo('MODELO:', r.modelo||''),
+        campo('COLOR:', r.color||''),
+        campo('S/N:', r.serie||''),
+        new Paragraph({ spacing:{before:100,after:60}, children:[txtB('ACCESORIOS:')] }),
+        new Paragraph({ children:[txt(r.accesorios||'ELIMINADOR DE CORRIENTE PROPIO DE MARCA')] }),
+      ];
+    } else {
+      cuerpo = [
+        new Paragraph({ alignment:AlignmentType.CENTER, spacing:{before:240,after:160}, children:[txtB('RESGUARDO DE DISPOSITIVO', 22)] }),
+        campo('EQUIPO:', r.tipo||''),
+        campo('MARCA:', r.marca||''),
+        campo('MODELO:', r.modelo||''),
+        campo('S/N:', r.serie||''),
+      ];
+    }
+    const importeTexto = 'FACULTO A LA EMPRESA A DESCONTAR DE MIS PERCEPCIONES EL IMPORTE TOTAL EN CASO DE EXTRAVÍO O DESCOMPOSTURA.';
+    docChildren.push(...cuerpo);
+    docChildren.push(new Paragraph({ spacing:{before:160,after:0}, children:[] }));
+    docChildren.push(new Table({
+      width:{size:9360,type:WidthType.DXA}, columnWidths:[9360],
+      rows:[new TableRow({ children:[new TableCell({
+        borders:fullBorder(), width:{size:9360,type:WidthType.DXA},
+        margins:{top:100,bottom:100,left:160,right:160},
+        children:[new Paragraph({ alignment:AlignmentType.BOTH, spacing:{before:60,after:60},
+          children:[txt('COMPROMETIENDOME A DARLES UN BUEN USO, ADECUADO Y A DEVOLVERLOS CUANDO LA EMPRESA '), txtB(empresaDoc), txt(' LO REQUIERA, AL MISMO TIEMPO '+importeTexto)]
+        })]
+      }) ]})]    }));
+  }
 
-  // ── Firmas ──────────────────────────────────────────────────────
-  const firmasTable = new Table({
-    width:{size:9360,type:WidthType.DXA}, columnWidths:[3120,3120,3120],
-    rows:[new TableRow({ children:[
-      new TableCell({ borders:noBorder(), width:{size:3120,type:WidthType.DXA},
-        children:[
-          new Paragraph({ alignment:AlignmentType.CENTER, spacing:{before:480,after:80}, children:[txt('RECIBIO')] }),
-          new Paragraph({ alignment:AlignmentType.CENTER, children:[txt('_______________________________')] }),
-          new Paragraph({ alignment:AlignmentType.CENTER, spacing:{before:60}, children:[txt(r.empleado||'')] }),
-        ]}),
-      new TableCell({ borders:noBorder(), width:{size:3120,type:WidthType.DXA}, children:[new Paragraph({children:[txt('')]})]}) ,
-      new TableCell({ borders:noBorder(), width:{size:3120,type:WidthType.DXA},
-        children:[
-          new Paragraph({ alignment:AlignmentType.CENTER, spacing:{before:480,after:80}, children:[txt('ENTREGÓ')] }),
-          new Paragraph({ alignment:AlignmentType.CENTER, children:[txt('_______________________________')] }),
-          new Paragraph({ alignment:AlignmentType.CENTER, spacing:{before:60}, children:[txt('SISTEMAS TI')] }),
-        ]}),
-    ]})]
-  });
+  // Agregar fecha y firmas
+  docChildren.push(new Paragraph({ alignment:AlignmentType.CENTER, spacing:{before:260,after:0}, children:[txt('SANTA CRUZ XOXOCOTLÁN, OAXACA, OAX. '+fechaStr)] }));
 
   // ── Ensamblar documento ──────────────────────────────────────────
   const doc = new Document({
@@ -5878,13 +5860,7 @@ async function descargarResguardo(id) {
         margin: { top:720, right:1080, bottom:720, left:1080 }
       } },
       children: [
-        headerTable,
-        new Paragraph({ spacing:{before:100,after:0}, children:[] }),
-        bandaTable,
-        ...cuerpo,
-        new Paragraph({ spacing:{before:160,after:0}, children:[] }),
-        clausulaTable,
-        new Paragraph({ alignment:AlignmentType.CENTER, spacing:{before:260,after:0}, children:[txt('SANTA CRUZ XOXOCOTLÁN, OAXACA, OAX. '+fechaStr)] }),
+        ...docChildren,
         firmasTable,
       ]
     }]
