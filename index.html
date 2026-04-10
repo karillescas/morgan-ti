@@ -5849,8 +5849,28 @@ async function descargarResguardo(id) {
       }) ]})]    }));
   }
 
-  // Agregar fecha y firmas
+  // Agregar fecha y firmas al final
   docChildren.push(new Paragraph({ alignment:AlignmentType.CENTER, spacing:{before:260,after:0}, children:[txt('SANTA CRUZ XOXOCOTLÁN, OAXACA, OAX. '+fechaStr)] }));
+
+  // Tabla de firmas
+  const firmasTable = new Table({
+    width:{size:9360,type:WidthType.DXA}, columnWidths:[3120,3120,3120],
+    rows:[new TableRow({ children:[
+      new TableCell({ borders:noBorder(), width:{size:3120,type:WidthType.DXA},
+        children:[
+          new Paragraph({ alignment:AlignmentType.CENTER, spacing:{before:480,after:80}, children:[txt('RECIBIO')] }),
+          new Paragraph({ alignment:AlignmentType.CENTER, children:[txt('_______________________________')] }),
+          new Paragraph({ alignment:AlignmentType.CENTER, spacing:{before:60}, children:[txt(r.empleado||'')] }),
+        ]}),
+      new TableCell({ borders:noBorder(), width:{size:3120,type:WidthType.DXA}, children:[new Paragraph({children:[txt('')]})] }),
+      new TableCell({ borders:noBorder(), width:{size:3120,type:WidthType.DXA},
+        children:[
+          new Paragraph({ alignment:AlignmentType.CENTER, spacing:{before:480,after:80}, children:[txt('ENTREGÓ')] }),
+          new Paragraph({ alignment:AlignmentType.CENTER, children:[txt('_______________________________')] }),
+          new Paragraph({ alignment:AlignmentType.CENTER, spacing:{before:60}, children:[txt(entregaDoc||'SISTEMAS TI')] }),
+        ]}),
+    ]})]  });
+  docChildren.push(firmasTable);
 
   // ── Ensamblar documento ──────────────────────────────────────────
   const doc = new Document({
@@ -5859,10 +5879,7 @@ async function descargarResguardo(id) {
         size: { width:12240, height:15840 },
         margin: { top:720, right:1080, bottom:720, left:1080 }
       } },
-      children: [
-        ...docChildren,
-        firmasTable,
-      ]
+      children: [...docChildren]
     }]
   });
 
