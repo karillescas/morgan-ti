@@ -2120,6 +2120,8 @@ function openModal(id) {
     const tEl=document.getElementById('alm-tipo-sel'); if(tEl) tEl.value='Componente';
     const pEl=document.getElementById('alm-plazo-meses'); if(pEl) pEl.value='';
     const grpCel=document.getElementById('alm-grupo-celular'); if(grpCel) grpCel.style.display='none';
+    _almEditId = null;
+    document.querySelector('#modal-ajuste-almacen .modal-title').textContent = 'Entrada manual al almacén';
     const fEl=document.getElementById('alm-fecha'); if(fEl) fEl.value=today;
   }
 }
@@ -3851,19 +3853,62 @@ function alm_ingresarDesdeXML(partida) {
   if (existente) {
     existente.stockTotal = (existente.stockTotal||0) + partida.qty;
   } else {
+    const esCelularXML = partida.tipo === 'Equipo' && partida.tipoEquipo === 'Celular';
     DB.almacen.push({
-      id:         Date.now() + Math.random(),
-      desc:       partida.desc,
-      tipo:       partida.tipo === 'Componente' ? 'Componente' : (partida.tipo === 'Equipo' ? 'Equipo' : 'Consumible'),
-      marca:      partida.marca || '',
-      costo:      partida.vu || 0,
-      stockTotal: partida.qty,
-      stockUsado: 0,
-      factura:    partida.factura || '',
-      fecha:      partida.fecha || '',
-      compraId:   null
+      id:          Date.now() + Math.random(),
+      desc:        partida.desc,
+      tipo:        partida.tipo === 'Componente' ? 'Componente'
+                 : esCelularXML ? 'Celular'
+                 : partida.tipo === 'Equipo' ? 'Equipo' : 'Consumible',
+      marca:       partida.marca || '',
+      modelo:      partida.modelo || '',
+      costo:       partida.vu || 0,
+      stockTotal:  partida.qty,
+      stockUsado:  0,
+      factura:     partida.factura || '',
+      fecha:       partida.fecha || '',
+      compraId:    partida.compraId || null,
+      // Campos celular — vacíos, se completan editando
+      imei:        '',
+      color:       '',
+      montoEmpleado: 0,
+      plazoMeses:  0,
+      montoMensual: 0,
     });
   }
+}
+
+
+function alm_editarItem(id) {
+  const a = DB.almacen.find(x => x.id == id);
+  if (!a) return;
+
+  // Poblar todos los campos
+  document.getElementById('alm-desc').value    = a.desc    || '';
+  document.getElementById('alm-marca').value   = a.marca   || '';
+  document.getElementById('alm-modelo').value  = a.modelo  || '';
+  document.getElementById('alm-costo').value   = a.costo   || '';
+  document.getElementById('alm-factura').value = a.factura || '';
+  document.getElementById('alm-fecha').value   = a.fecha   || '';
+  const qEl = document.getElementById('alm-qty');
+  if (qEl) { qEl.value = a.stockTotal || 1; qEl.readOnly = a.tipo === 'Celular'; }
+
+  const tEl = document.getElementById('alm-tipo-sel');
+  if (tEl) { tEl.value = a.tipo || 'Equipo'; alm_toggleCelular(); }
+
+  // Campos celular
+  if (a.tipo === 'Celular') {
+    document.getElementById('alm-imei').value           = a.imei           || '';
+    document.getElementById('alm-color').value          = a.color          || '';
+    document.getElementById('alm-monto-empleado').value = a.montoEmpleado  || '';
+    document.getElementById('alm-plazo-meses').value    = a.plazoMeses     || '';
+    document.getElementById('alm-mensual').value        = a.montoMensual   || '';
+  }
+
+  // Cambiar el botón guardar para que actualice en lugar de crear
+  _almEditId = id;
+  document.querySelector('#modal-ajuste-almacen .modal-title').textContent = 'Editar equipo';
+  openModal('modal-ajuste-almacen');
 }
 
 function alm_toggleCelular() {
@@ -3898,6 +3943,40 @@ function alm_guardarEntrada() {
   const tipo = document.getElementById('alm-tipo-sel').value;
   const qty  = tipo === 'Celular' ? 1 : (parseInt(document.getElementById('alm-qty').value) || 1);
   if (!desc) { toast('Escribe la descripción', '⚠️'); return; }
+
+  // Modo edición: actualizar item existente
+  if (_almEditId) {
+    const idx = DB.almacen.findIndex(x => x.id == _almEditId);
+    if (idx >= 0) {
+      const esCelular = tipo === 'Celular';
+      const imei = esCelular ? document.getElementById('alm-imei').value.trim() : '';
+      // Verificar IMEI duplicado (solo si cambió)
+      if (esCelular && imei && imei !== DB.almacen[idx].imei) {
+        const dup = DB.almacen.find((a,i) => i!==idx && a.imei === imei);
+        if (dup) { toast('Ya existe un equipo con ese IMEI', '⚠️'); return; }
+      }
+      DB.almacen[idx] = { ...DB.almacen[idx],
+        desc, tipo,
+        marca:         document.getElementById('alm-marca').value.trim(),
+        modelo:        document.getElementById('alm-modelo')?.value.trim() || '',
+        costo:         parseFloat(document.getElementById('alm-costo').value) || 0,
+        factura:       document.getElementById('alm-factura').value.trim(),
+        fecha:         document.getElementById('alm-fecha').value,
+        imei:          esCelular ? imei : '',
+        color:         esCelular ? document.getElementById('alm-color').value.trim() : '',
+        montoEmpleado: esCelular ? (parseFloat(document.getElementById('alm-monto-empleado').value)||0) : 0,
+        plazoMeses:    esCelular ? (parseInt(document.getElementById('alm-plazo-meses').value)||0) : 0,
+        montoMensual:  esCelular ? (parseFloat(document.getElementById('alm-mensual').value)||0) : 0,
+      };
+      guardarDB();
+      _almEditId = null;
+      document.querySelector('#modal-ajuste-almacen .modal-title').textContent = 'Entrada manual al almacén';
+      closeModal('modal-ajuste-almacen');
+      renderAlmacen();
+      toast('Equipo actualizado ✓');
+    }
+    return;
+  }
 
   const esCelular = tipo === 'Celular';
   const imei = esCelular ? document.getElementById('alm-imei').value.trim() : '';
@@ -4003,6 +4082,7 @@ function alm_eliminar(id) {
 
 let arm_lineas = [];  // [{ almacenId, qtyPorPC }]
 let _resEditId = null;  // ID del resguardo en edición
+let _almEditId  = null;  // ID del item de almacén en edición
 
 function arm_agregarLinea() {
   arm_lineas.push({ almacenId: null, qtyPorPC: 1 });
