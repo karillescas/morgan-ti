@@ -2115,10 +2115,9 @@ function openModal(id) {
   if (id === 'modal-ajuste-almacen') {
     const today = new Date().toISOString().split('T')[0];
     ['alm-desc','alm-marca','alm-modelo','alm-factura','alm-imei','alm-color','alm-monto-empleado','alm-mensual'].forEach(id2 => { const el=document.getElementById(id2); if(el) el.value=''; });
-    const qEl=document.getElementById('alm-qty'); if(qEl) qEl.value='1';
+    const qEl=document.getElementById('alm-qty'); if(qEl){ qEl.value=1; qEl.readOnly=false; }
     const cEl=document.getElementById('alm-costo'); if(cEl) cEl.value='';
     const tEl=document.getElementById('alm-tipo-sel'); if(tEl) tEl.value='Componente';
-    const qEl=document.getElementById('alm-qty'); if(qEl){ qEl.value=1; qEl.readOnly=false; }
     const pEl=document.getElementById('alm-plazo-meses'); if(pEl) pEl.value='';
     const grpCel=document.getElementById('alm-grupo-celular'); if(grpCel) grpCel.style.display='none';
     const fEl=document.getElementById('alm-fecha'); if(fEl) fEl.value=today;
