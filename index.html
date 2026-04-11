@@ -4079,25 +4079,47 @@ function renderAlmacen() {
         </div>
       </td>
       <td><div class="row-actions">
-        <button class="icon-btn del" onclick="alm_eliminar(${a.id})">🗑</button>
+        <button class="btn btn-ghost btn-sm" onclick="alm_editarItem(${a.id})" title="Editar">✏</button>
+        <button class="icon-btn del" onclick="alm_eliminar(${a.id})" title="Eliminar">🗑</button>
       </div></td>
     </tr>`;
   }).join('');
 }
 
 function alm_eliminar(id) {
-  const a = DB.almacen.find(x=>x.id===id);
+  const a = DB.almacen.find(x => x.id === id);
   if (!a) return;
-  if ((a.stockUsado||0) > 0) {
-    if (!confirm(`"${a.desc}" tiene ${a.stockUsado} unidades usadas en PCs ensambladas. ¿Eliminar de todas formas?`)) return;
-  } else {
-    if (!confirm(`¿Eliminar "${a.desc}" del almacén?`)) return;
+
+  // Verificar si hay resguardos activos vinculados
+  const resActivos = (DB.resguardos||[]).filter(r =>
+    r.almacenId == id && r.estado !== 'Baja'
+  );
+  if (resActivos.length) {
+    const nombres = resActivos.map(r => r.empleado).join(', ');
+    toast(`No se puede eliminar — está asignado a resguardo${resActivos.length>1?'s':''} de: ${nombres}`, '⚠️');
+    return;
   }
-  DB.almacen = DB.almacen.filter(x=>x.id!==id);
+
+  // Verificar si hay compras vinculadas
+  const comprasVinc = (DB.compras||[]).filter(c => c.id == a.compraId);
+
+  let msg = `¿Eliminar "${a.desc}" del almacén?`;
+  if (comprasVinc.length) msg += `
+
+También se eliminará el registro de compra vinculado.`;
+  if (!confirm(msg)) return;
+
+  // Eliminar compras vinculadas
+  if (comprasVinc.length && a.compraId) {
+    DB.compras = DB.compras.filter(c => c.id != a.compraId);
+  }
+
+  DB.almacen = DB.almacen.filter(x => x.id !== id);
   guardarDB();
   renderAlmacen();
+  renderCompras();
   actualizarBadges();
-  toast('Item eliminado del almacén', '🗑');
+  toast('Item eliminado del almacén ✓', '🗑');
 }
 
 // ─── ARMAR PC ─────────────────────────────────────────────────────
@@ -4733,6 +4755,28 @@ function renderEquiposCat() {
 // ─── ELIMINAR ────────────────────────────────────────────────────
 async function eliminar(modulo, id, renderFn) {
   if (!confirm('¿Eliminar este registro?')) return;
+
+  // Al eliminar compra: eliminar item del almacén si no tiene resguardo activo
+  if (modulo === 'compras') {
+    const compra = DB.compras.find(x => String(x.id) === String(id));
+    if (compra) {
+      // Buscar items en almacén vinculados a esta compra
+      const itemsAlm = DB.almacen.filter(a => String(a.compraId) === String(id));
+      for (const item of itemsAlm) {
+        const resActivos = (DB.resguardos||[]).filter(r =>
+          r.almacenId == item.id && r.estado !== 'Baja'
+        );
+        if (resActivos.length) {
+          const nombres = resActivos.map(r => r.empleado).join(', ');
+          toast(`No se puede eliminar — el equipo "${item.desc}" está en resguardo de: ${nombres}`, '⚠️');
+          return; // cancelar toda la operación
+        }
+        // Sin resguardo: eliminar del almacén
+        DB.almacen = DB.almacen.filter(a => a.id !== item.id);
+        await db.collection('almacen').doc(String(item.id)).delete().catch(()=>{});
+      }
+    }
+  }
 
   // Al eliminar resguardo: liberar línea y devolver al almacén
   if (modulo === 'resguardos') {
