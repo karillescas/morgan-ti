@@ -3663,8 +3663,8 @@ function guardarPartidasXML() {
       notas:      notaF,
       origen:     'xml'
     });
-    // Componentes y Equipos también van al almacén
-    if (p.tipo === 'Componente' || p.tipo === 'Equipo') {
+    // Componentes, Equipos y Celulares van al almacén
+    if (p.tipo === 'Componente' || p.tipo === 'Equipo' || p.tipo === 'Celular') {
       alm_ingresarDesdeXML({ ...p, vu: vuFinal, compraId });
     }
   });
@@ -3797,15 +3797,17 @@ function guardarPartidasManuales() {
   const rfc       = document.getElementById('m-rfc').value.trim();
 
   partidasManuales.forEach(p => {
-    const esEquipo = p.tipo === 'Equipo';
+    const esEquipo  = p.tipo === 'Equipo';
+    const esCelular = p.tipo === 'Celular';
+    const compraId  = Date.now() + Math.random();
     DB.compras.push({
-      id: Date.now() + Math.random(),
+      id: compraId,
       concepto:   p.desc,
       tipo:       p.tipo,
-      tipoEquipo: esEquipo ? (p.tipoEquipo || 'Otro') : '',
+      tipoEquipo: esEquipo ? (p.tipoEquipo || 'Otro') : esCelular ? 'Celular' : '',
       marca:      p.marca || '',
       modelo:     p.modelo || '',
-      prefijo:    esEquipo ? (p.prefijo || 'TI') : '',
+      prefijo:    (esEquipo || esCelular) ? (p.prefijo || 'TI') : '',
       proveedor, rfc,
       cantidad:   p.qty,
       costo:      p.vu,
@@ -3814,10 +3816,26 @@ function guardarPartidasManuales() {
       notas: '',
       origen: 'manual'
     });
+    // Equipos y Celulares también van al almacén
+    if (esEquipo || esCelular) {
+      alm_ingresarDesdeXML({
+        desc:      p.desc,
+        tipo:      p.tipo,
+        tipoEquipo: esCelular ? 'Celular' : (p.tipoEquipo || 'Otro'),
+        marca:     p.marca || '',
+        modelo:    p.modelo || '',
+        vu:        p.vu,
+        qty:       p.qty,
+        factura,
+        fecha,
+        compraId,
+      });
+    }
   });
   guardarDB();
   closeModal('modal-compra');
   renderCompras();
+  if (typeof renderAlmacen === 'function') renderAlmacen();
   actualizarBadges();
   toast(`${partidasManuales.length} partida${partidasManuales.length>1?'s':''} guardada${partidasManuales.length>1?'s':''}`);
   partidasManuales = [];
@@ -3853,13 +3871,18 @@ function alm_ingresarDesdeXML(partida) {
   if (existente) {
     existente.stockTotal = (existente.stockTotal||0) + partida.qty;
   } else {
-    const esCelularXML = partida.tipo === 'Equipo' && partida.tipoEquipo === 'Celular';
+    const esCelularXML = partida.tipo === 'Celular'
+                        || (partida.tipo === 'Equipo' && partida.tipoEquipo === 'Celular');
+    const tipoAlmacen  = partida.tipo === 'Componente' ? 'Componente'
+                       : esCelularXML ? 'Celular'
+                       : (partida.tipo === 'Equipo' || partida.tipo === 'Accesorio'
+                          || partida.tipo === 'Licencia' || partida.tipo === 'Servicio'
+                          || partida.tipo === 'Flete') ? partida.tipo
+                       : partida.tipo === 'Consumible' ? 'Consumible' : 'Equipo';
     DB.almacen.push({
       id:          Date.now() + Math.random(),
       desc:        partida.desc,
-      tipo:        partida.tipo === 'Componente' ? 'Componente'
-                 : esCelularXML ? 'Celular'
-                 : partida.tipo === 'Equipo' ? 'Equipo' : 'Consumible',
+      tipo:        tipoAlmacen,
       marca:       partida.marca || '',
       modelo:      partida.modelo || '',
       costo:       partida.vu || 0,
